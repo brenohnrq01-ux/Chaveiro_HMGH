@@ -15,14 +15,6 @@ const JWT_SECRET = process.env.JWT_SECRET || 'chave_secreta';
 app.use(cors());
 app.use(express.json());
 
-// Servir arquivos estáticos do Frontend (index.html)
-app.use(express.static(path.join(__dirname, '../')));
-
-// Rota de teste/Health check para verificar se a API está no ar
-app.get('/', (req, res) => {
-  res.send('API do Controle de Chaves está rodando!');
-});
-
 // ==========================================
 // MIDDLEWARE DE AUTENTICAÇÃO (JWT)
 // ==========================================
@@ -52,8 +44,6 @@ app.post('/api/login', async (req, res) => {
   try {
     const result = await pool.query('SELECT * FROM usuarios WHERE email = $1', [email]);
     
-    console.log('E-mail recebido:', email);
-
     if (result.rows.length === 0) {
       return res.status(401).json({ erro: 'Credenciais inválidas.' });
     }
@@ -99,7 +89,6 @@ app.get('/api/dashboard', autenticarToken, async (req, res) => {
       LEFT JOIN pessoas_autorizadas p ON e.pessoa_autorizada_id = p.id
       ORDER BY s.nome, c.numero_identificador;
     `;
-
     const result = await pool.query(queryText);
     return res.json(result.rows);
   } catch (error) {
@@ -120,7 +109,6 @@ app.post('/api/emprestimos', autenticarToken, async (req, res) => {
   }
 
   const client = await pool.connect();
-
   try {
     await client.query('BEGIN');
 
@@ -147,11 +135,7 @@ app.post('/api/emprestimos', autenticarToken, async (req, res) => {
       [chave_id, pessoa_autorizada_id, usuario_operador_id, data_previsao_devolucao]
     );
 
-    await client.query(
-      "UPDATE chaves SET status = 'emprestada' WHERE id = $1",
-      [chave_id]
-    );
-
+    await client.query("UPDATE chaves SET status = 'emprestada' WHERE id = $1", [chave_id]);
     await client.query('COMMIT');
 
     return res.status(201).json({
@@ -173,7 +157,6 @@ app.post('/api/emprestimos', autenticarToken, async (req, res) => {
 app.post('/api/emprestimos/:id/devolucao', autenticarToken, async (req, res) => {
   const { id } = req.params;
   const client = await pool.connect();
-
   try {
     await client.query('BEGIN');
 
@@ -197,11 +180,7 @@ app.post('/api/emprestimos/:id/devolucao', autenticarToken, async (req, res) => 
       [id]
     );
 
-    await client.query(
-      "UPDATE chaves SET status = 'guardada' WHERE id = $1",
-      [emprestimo.chave_id]
-    );
-
+    await client.query("UPDATE chaves SET status = 'guardada' WHERE id = $1", [emprestimo.chave_id]);
     await client.query('COMMIT');
 
     return res.json({
@@ -237,7 +216,6 @@ app.get('/api/emprestimos/atrasados', autenticarToken, async (req, res) => {
       WHERE e.data_devolucao IS NULL 
         AND e.data_previsao_devolucao < CURRENT_TIMESTAMP;
     `;
-
     const result = await pool.query(queryText);
     return res.json(result.rows);
   } catch (error) {
@@ -246,18 +224,20 @@ app.get('/api/emprestimos/atrasados', autenticarToken, async (req, res) => {
   }
 });
 
-const path = require('path');
+// ==========================================
+// CONFIGURAÇÃO DO FRONTEND (RENDER)
+// ==========================================
+const rootDir = process.cwd();
 
-// Serve os arquivos estáticos (CSS, JS, imagens) da pasta raiz do projeto
-app.use(express.static(path.join(__dirname, '..')));
+// Serve os arquivos estáticos da pasta raiz
+app.use(express.static(rootDir));
 
-// Entrega o index.html ao acessar a rota principal '/'
-app.get('/', (req, res) => {
-  res.sendFile(path.join(__dirname, '..', 'index.html'));
+// Qualquer rota que não seja da API (/api/...) entrega o index.html
+app.get('*', (req, res) => {
+  res.sendFile(path.join(rootDir, 'index.html'));
 });
 
-
-// Porta do servidor (Gerida pelo Render em produção)
+// Porta do servidor
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
   console.log(`Servidor rodando na porta ${PORT}`);
