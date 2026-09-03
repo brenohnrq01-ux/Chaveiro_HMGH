@@ -246,6 +246,17 @@ app.get('/api/emprestimos/atrasados', autenticarToken, async (req, res) => {
   }
 });
 
+const path = require('path');
+
+// Serve os arquivos estáticos (CSS, JS, imagens) da pasta raiz do projeto
+app.use(express.static(path.join(__dirname, '..')));
+
+// Entrega o index.html ao acessar a rota principal '/'
+app.get('/', (req, res) => {
+  res.sendFile(path.join(__dirname, '..', 'index.html'));
+});
+
+
 // Porta do servidor (Gerida pelo Render em produção)
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
