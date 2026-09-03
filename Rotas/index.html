@@ -1,0 +1,284 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Painel de Controle de Chaves</title>
+  <style>
+    * { box-sizing: border-box; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; margin: 0; padding: 0; }
+    body { background-color: #f4f6f9; color: #333; padding: 20px; }
+    header { display: flex; justify-content: space-between; align-items: center; background: #ffffff; padding: 15px 25px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.05); margin-bottom: 20px; }
+    .alert-banner { background: #ffebee; border-left: 5px solid #ef5350; padding: 15px; border-radius: 4px; margin-bottom: 25px; display: none; }
+    .grid-sectors { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 20px; }
+    .sector-card { background: #fff; border-radius: 8px; padding: 20px; box-shadow: 0 2px 5px rgba(0,0,0,0.05); }
+    .sector-title { font-size: 1.1rem; font-weight: bold; margin-bottom: 15px; color: #2c3e50; border-bottom: 2px solid #eee; padding-bottom: 8px; }
+    .key-list { list-style: none; }
+    .key-item { display: flex; justify-content: space-between; align-items: center; padding: 10px 0; border-bottom: 1px solid #f0f0f0; }
+    .badge { padding: 4px 8px; border-radius: 12px; font-size: 0.8rem; font-weight: bold; text-transform: uppercase; }
+    .badge-guardada { background: #e8f5e9; color: #2e7d32; }
+    .badge-emprestada { background: #fff3e0; color: #ef6c00; }
+    .btn { padding: 6px 12px; border: none; border-radius: 4px; cursor: pointer; font-size: 0.85rem; font-weight: 600; }
+    .btn-primary { background: #1976d2; color: white; }
+    .btn-secondary { background: #757575; color: white; }
+    .btn-danger { background: #d32f2f; color: white; }
+    
+    .modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); align-items: center; justify-content: center; }
+    .modal-content { background: white; padding: 25px; border-radius: 8px; width: 400px; max-width: 90%; }
+    .form-group { margin-bottom: 15px; }
+    .form-group label { display: block; font-weight: 600; margin-bottom: 5px; font-size: 0.9rem; }
+    .form-group input { width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 4px; }
+  </style>
+</head>
+<body>
+
+  <!-- Tela de Login (Exibida quando não há token salvo) -->
+  <div id="loginScreen" class="modal" style="display: flex;">
+    <div class="modal-content">
+      <h2 style="margin-bottom: 15px;">Login no Sistema</h2>
+      <form id="loginForm">
+        <div class="form-group">
+          <label>E-mail</label>
+          <input type="email" id="loginEmail" required placeholder="admin@empresa.com">
+        </div>
+        <div class="form-group">
+          <label>Senha</label>
+          <input type="password" id="loginSenha" required placeholder="••••••••">
+        </div>
+        <button type="submit" class="btn btn-primary" style="width: 100%; padding: 10px;">Entrar</button>
+      </form>
+    </div>
+  </div>
+
+  <!-- Painel Principal (Exibido após autenticação) -->
+  <div id="mainDashboard" style="display: none;">
+    <header>
+      <h1>Controle de Chaves</h1>
+      <div>
+        <span>Operador Logado: <strong id="operatorName">...</strong></span>
+        <button class="btn btn-danger" style="margin-left: 15px;" onclick="logout()">Sair</button>
+      </div>
+    </header>
+
+    <div id="alertBanner" class="alert-banner">
+      <strong>⚠️ Atenção: Chaves em Atraso</strong>
+      <ul id="alertList" style="margin-top: 8px; padding-left: 20px;"></ul>
+    </div>
+
+    <div class="grid-sectors" id="sectorsContainer"></div>
+  </div>
+
+  <!-- Modal de Empréstimo -->
+  <div id="loanModal" class="modal">
+    <div class="modal-content">
+      <h3 style="margin-bottom: 15px;">Registrar Empréstimo</h3>
+      <form id="loanForm">
+        <input type="hidden" id="loanKeyId">
+        <div class="form-group">
+          <label>Chave Identificadora</label>
+          <input type="text" id="loanKeyNum" readonly style="background: #eee;">
+        </div>
+        <div class="form-group">
+          <label>ID da Pessoa Autorizada</label>
+          <input type="number" id="loanPersonId" required placeholder="Ex: 1">
+        </div>
+        <div class="form-group">
+          <label>Previsão de Devolução</label>
+          <input type="datetime-local" id="loanReturnDate" required>
+        </div>
+        <div style="display: flex; justify-content: flex-end; gap: 10px;">
+          <button type="button" class="btn btn-secondary" onclick="closeModal()">Cancelar</button>
+          <button type="submit" class="btn btn-primary">Confirmar Saída</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <script>
+    const API_URL = 'http://localhost:3000/api';
+
+    document.addEventListener('DOMContentLoaded', () => {
+      const token = localStorage.getItem('jwt_token');
+      if (token) {
+        showDashboard();
+      }
+    });
+
+    // 1. AÇÃO DE LOGIN
+    document.getElementById('loginForm').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const email = document.getElementById('loginEmail').value;
+      const senha = document.getElementById('loginSenha').value;
+
+      try {
+        const res = await fetch(`${API_URL}/login`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ email, senha })
+        });
+
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.erro || 'Falha na autenticação');
+
+        // Salva token e dados do usuário no navegador
+        localStorage.setItem('jwt_token', data.token);
+        localStorage.setItem('user_name', data.usuario.nome);
+
+        showDashboard();
+      } catch (err) {
+        alert(`Erro de Login: ${err.message}`);
+      }
+    });
+
+    function showDashboard() {
+      document.getElementById('loginScreen').style.display = 'none';
+      document.getElementById('mainDashboard').style.display = 'block';
+      document.getElementById('operatorName').innerText = localStorage.getItem('user_name') || 'Operador';
+      loadDashboard();
+      checkOverdueKeys();
+    }
+
+    function logout() {
+      localStorage.clear();
+      window.location.reload();
+    }
+
+    // Função Auxiliar para Requisições Autenticadas
+    function getAuthHeaders() {
+      const token = localStorage.getItem('jwt_token');
+      return {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`
+      };
+    }
+
+    // 2. CARREGAR DASHBOARD
+    async function loadDashboard() {
+      try {
+        const res = await fetch(`${API_URL}/dashboard`, { headers: getAuthHeaders() });
+        const data = await res.json();
+
+        if (!res.ok) throw new Error(data.erro || 'Erro ao buscar dados');
+
+        // Agrupa o resultado plano da API por setores
+        const sectorsMap = {};
+        data.forEach(item => {
+          if (!sectorsMap[item.setor_nome]) {
+            sectorsMap[item.setor_nome] = [];
+          }
+          if (item.chave_id) {
+            sectorsMap[item.setor_nome].push(item);
+          }
+        });
+
+        const container = document.getElementById('sectorsContainer');
+        container.innerHTML = Object.keys(sectorsMap).map(sectorName => `
+          <div class="sector-card">
+            <div class="sector-title">${sectorName}</div>
+            <ul class="key-list">
+              ${sectorsMap[sectorName].map(key => `
+                <li class="key-item">
+                  <div>
+                    <strong>${key.numero_identificador}</strong> - ${key.nome_chave}<br>
+                    <span class="badge ${key.chave_status === 'guardada' ? 'badge-guardada' : 'badge-emprestada'}">${key.chave_status}</span>
+                    ${key.pessoa_com_chave ? `<br><small>Com: ${key.pessoa_com_chave}</small>` : ''}
+                  </div>
+                  <div>
+                    ${key.chave_status === 'guardada' 
+                      ? `<button class="btn btn-primary" onclick="openLoanModal(${key.chave_id}, '${key.numero_identificador}')">Retirar</button>`
+                      : `<button class="btn btn-secondary" onclick="returnKey(${key.emprestimo_id})">Devolver</button>`
+                    }
+                  </div>
+                </li>
+              `).join('')}
+            </ul>
+          </div>
+        `).join('');
+
+      } catch (err) {
+        if (err.message.includes('Token') || err.message.includes('negado')) {
+          logout();
+        } else {
+          alert(`Erro ao carregar o painel: ${err.message}`);
+        }
+      }
+    }
+
+    // 3. REGISTRAR EMPRÉSTIMO
+    function openLoanModal(keyId, keyNum) {
+      document.getElementById('loanKeyId').value = keyId;
+      document.getElementById('loanKeyNum').value = keyNum;
+      document.getElementById('loanModal').style.display = 'flex';
+    }
+
+    function closeModal() {
+      document.getElementById('loanModal').style.display = 'none';
+      document.getElementById('loanForm').reset();
+    }
+
+    document.getElementById('loanForm').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const payload = {
+        chave_id: parseInt(document.getElementById('loanKeyId').value),
+        pessoa_autorizada_id: parseInt(document.getElementById('loanPersonId').value),
+        data_previsao_devolucao: document.getElementById('loanReturnDate').value
+      };
+
+      try {
+        const res = await fetch(`${API_URL}/emprestimos`, {
+          method: 'POST',
+          headers: getAuthHeaders(),
+          body: JSON.stringify(payload)
+        });
+
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.erro || 'Falha ao registrar empréstimo');
+
+        alert('Empréstimo registrado com sucesso!');
+        closeModal();
+        loadDashboard();
+      } catch (err) {
+        alert(`Erro: ${err.message}`);
+      }
+    });
+
+    // 4. REGISTRAR DEVOLUÇÃO
+    async function returnKey(emprestimoId) {
+      if (!confirm('Confirmar a devolução desta chave?')) return;
+
+      try {
+        const res = await fetch(`${API_URL}/emprestimos/${emprestimoId}/devolucao`, {
+          method: 'POST',
+          headers: getAuthHeaders()
+        });
+
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.erro || 'Falha ao devolver chave');
+
+        alert('Chave devolvida com sucesso!');
+        loadDashboard();
+      } catch (err) {
+        alert(`Erro: ${err.message}`);
+      }
+    }
+
+    // 5. VERIFICAR ATRASOS
+    async function checkOverdueKeys() {
+      try {
+        const res = await fetch(`${API_URL}/emprestimos/atrasados`, { headers: getAuthHeaders() });
+        const data = await res.json();
+
+        if (res.ok && data.length > 0) {
+          const banner = document.getElementById('alertBanner');
+          const list = document.getElementById('alertList');
+          banner.style.display = 'block';
+          list.innerHTML = data.map(k => `
+            <li><strong>${k.numero_identificador} (${k.nome_chave})</strong> com ${k.pessoa_nome} (Tel: ${k.pessoa_telefone || 'N/A'})</li>
+          `).join('');
+        }
+      } catch (err) {
+        console.error('Erro ao verificar atrasos:', err);
+      }
+    }
+  </script>
+</body>
+</html>
