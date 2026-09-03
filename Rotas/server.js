@@ -232,8 +232,8 @@ const rootDir = process.cwd();
 // Serve os arquivos estáticos da pasta raiz
 app.use(express.static(rootDir));
 
-// Qualquer rota que não seja da API (/api/...) entrega o index.html
-app.get('*', (req, res) => {
+// Qualquer rota que não seja da API entrega o index.html (Fallback para SPA)
+app.use((req, res) => {
   res.sendFile(path.join(rootDir, 'index.html'));
 });
 
