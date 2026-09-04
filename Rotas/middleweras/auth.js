@@ -19,12 +19,6 @@ function autenticarToken(req, res, next) {
 
     // Injeta os dados do operador decodificados no objeto da requisição (req)
     req.usuario = usuarioDecodificado;
-
-    // Middleware global de Encoding
-app.use((req, res, next) => {
-  res.setHeader('Content-Type', 'application/json; charset=utf-8');
-  next();
-});
     
     // Prossegue para o próximo handler (a rota desejada)
     next();
