@@ -3,89 +3,244 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Painel de Controle de Chaves</title>
+  <title>Controle de Chaves | Painel Admin</title>
+  
+  <!-- Fontes e Ícones externos -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
   <style>
-    * { box-sizing: border-box; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; margin: 0; padding: 0; }
-    body { background-color: #f4f6f9; color: #333; padding: 20px; }
-    header { display: flex; justify-content: space-between; align-items: center; background: #ffffff; padding: 15px 25px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.05); margin-bottom: 20px; }
-    .alert-banner { background: #ffebee; border-left: 5px solid #ef5350; padding: 15px; border-radius: 4px; margin-bottom: 25px; display: none; }
-    .grid-sectors { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 20px; }
-    .sector-card { background: #fff; border-radius: 8px; padding: 20px; box-shadow: 0 2px 5px rgba(0,0,0,0.05); }
-    .sector-title { font-size: 1.1rem; font-weight: bold; margin-bottom: 15px; color: #2c3e50; border-bottom: 2px solid #eee; padding-bottom: 8px; }
-    .key-list { list-style: none; }
-    .key-item { display: flex; justify-content: space-between; align-items: center; padding: 10px 0; border-bottom: 1px solid #f0f0f0; }
-    .badge { padding: 4px 8px; border-radius: 12px; font-size: 0.8rem; font-weight: bold; text-transform: uppercase; }
-    .badge-guardada { background: #e8f5e9; color: #2e7d32; }
-    .badge-emprestada { background: #fff3e0; color: #ef6c00; }
-    .btn { padding: 6px 12px; border: none; border-radius: 4px; cursor: pointer; font-size: 0.85rem; font-weight: 600; }
-    .btn-primary { background: #1976d2; color: white; }
-    .btn-secondary { background: #757575; color: white; }
-    .btn-danger { background: #d32f2f; color: white; }
-    
-    .modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); align-items: center; justify-content: center; }
-    .modal-content { background: white; padding: 25px; border-radius: 8px; width: 400px; max-width: 90%; }
-    .form-group { margin-bottom: 15px; }
-    .form-group label { display: block; font-weight: 600; margin-bottom: 5px; font-size: 0.9rem; }
-    .form-group input { width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 4px; }
+    :root {
+      --primary: #4f46e5;
+      --primary-hover: #4338ca;
+      --bg-body: #f8fafc;
+      --surface: #ffffff;
+      --text-main: #0f172a;
+      --text-muted: #64748b;
+      --border: #e2e8f0;
+      --success-bg: #dcfce7;
+      --success-text: #15803d;
+      --warning-bg: #fef3c7;
+      --warning-text: #b45309;
+      --danger-bg: #fee2e2;
+      --danger-text: #b91c1c;
+      --radius: 12px;
+      --shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -2px rgba(0, 0, 0, 0.1);
+    }
+
+    * { box-sizing: border-box; font-family: 'Inter', sans-serif; margin: 0; padding: 0; }
+    body { background-color: var(--bg-body); color: var(--text-main); min-height: 100vh; line-height: 1.5; }
+
+    /* Login Box (Modal Overlay) */
+    .login-container {
+      display: flex; position: fixed; top: 0; left: 0; width: 100vw; height: 100vh;
+      background: linear-gradient(135deg, #0f172a 0%, #1e1b4b 100%);
+      align-items: center; justify-content: center; z-index: 100; padding: 20px;
+    }
+    .login-card {
+      background: rgba(255, 255, 255, 0.95); backdrop-filter: blur(10px);
+      padding: 40px; border-radius: 16px; width: 100%; max-width: 420px;
+      box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25); text-align: center;
+    }
+    .login-card .logo-icon {
+      background: var(--primary); color: white; width: 56px; height: 56px;
+      border-radius: 14px; display: inline-flex; align-items: center;
+      justify-content: center; font-size: 24px; margin-bottom: 20px;
+    }
+
+    /* Top Bar Header */
+    header {
+      background: var(--surface); border-bottom: 1px solid var(--border);
+      padding: 16px 32px; display: flex; justify-content: space-between; align-items: center;
+      box-shadow: var(--shadow); position: sticky; top: 0; z-index: 10;
+    }
+    .brand { display: flex; align-items: center; gap: 12px; font-weight: 700; font-size: 1.25rem; color: var(--text-main); }
+    .brand i { color: var(--primary); font-size: 1.5rem; }
+    .user-profile { display: flex; align-items: center; gap: 16px; }
+
+    /* Layout Principal */
+    main { max-width: 1400px; margin: 32px auto; padding: 0 24px; }
+
+    /* Banner Alerta de Atrasos */
+    .alert-banner {
+      background: var(--danger-bg); border: 1px solid #fca5a5; border-radius: var(--radius);
+      padding: 18px 24px; margin-bottom: 24px; display: none; color: var(--danger-text);
+    }
+    .alert-banner h4 { display: flex; align-items: center; gap: 8px; font-weight: 600; font-size: 1rem; margin-bottom: 8px; }
+    .alert-list { list-style: none; padding-left: 28px; }
+    .alert-list li { margin-top: 4px; font-size: 0.9rem; }
+
+    /* Estatísticas do Dashboard */
+    .stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 16px; margin-bottom: 32px; }
+    .stat-card {
+      background: var(--surface); padding: 20px; border-radius: var(--radius);
+      border: 1px solid var(--border); display: flex; align-items: center; gap: 16px;
+    }
+    .stat-icon {
+      width: 48px; height: 48px; border-radius: 10px; display: flex; align-items: center; justify-content: center; font-size: 1.25rem;
+    }
+
+    /* Grid de Setores e Cards de Chaves */
+    .grid-sectors { display: grid; grid-template-columns: repeat(auto-fit, minmax(340px, 1fr)); gap: 24px; }
+    .sector-card {
+      background: var(--surface); border-radius: var(--radius); border: 1px solid var(--border);
+      padding: 20px; box-shadow: var(--shadow); display: flex; flex-direction: column;
+    }
+    .sector-title {
+      font-size: 1.1rem; font-weight: 600; color: var(--text-main); margin-bottom: 16px;
+      padding-bottom: 12px; border-bottom: 1px solid var(--border); display: flex;
+      justify-content: space-between; align-items: center;
+    }
+
+    /* Lista de Chaves */
+    .key-list { list-style: none; display: flex; flex-direction: column; gap: 12px; }
+    .key-item {
+      display: flex; justify-content: space-between; align-items: center; padding: 12px 14px;
+      background: #f8fafc; border: 1px solid var(--border); border-radius: 8px; transition: all 0.2s;
+    }
+    .key-item:hover { border-color: #cbd5e1; background: #f1f5f9; }
+    .key-info strong { font-size: 0.95rem; color: var(--text-main); }
+    .key-info small { color: var(--text-muted); font-size: 0.8rem; display: block; margin-top: 2px; }
+
+    /* Badges de Status */
+    .badge {
+      display: inline-block; padding: 2px 8px; border-radius: 6px; font-size: 0.75rem;
+      font-weight: 600; text-transform: uppercase; margin-top: 4px;
+    }
+    .badge-guardada { background: var(--success-bg); color: var(--success-text); }
+    .badge-emprestada { background: var(--warning-bg); color: var(--warning-text); }
+
+    /* Botões Genericos */
+    .btn {
+      padding: 8px 16px; border: none; border-radius: 8px; cursor: pointer;
+      font-size: 0.875rem; font-weight: 500; display: inline-flex; align-items: center;
+      gap: 8px; transition: background 0.2s, transform 0.1s;
+    }
+    .btn:active { transform: scale(0.98); }
+    .btn-primary { background: var(--primary); color: white; }
+    .btn-primary:hover { background: var(--primary-hover); }
+    .btn-secondary { background: #e2e8f0; color: var(--text-main); }
+    .btn-secondary:hover { background: #cbd5e1; }
+    .btn-danger { background: var(--danger-bg); color: var(--danger-text); }
+    .btn-danger:hover { background: #fca5a5; }
+
+    /* Campos de Formulário */
+    .form-group { margin-bottom: 20px; text-align: left; }
+    .form-group label { display: block; font-weight: 500; margin-bottom: 6px; font-size: 0.875rem; color: var(--text-main); }
+    .form-group input {
+      width: 100%; padding: 10px 14px; border: 1px solid var(--border);
+      border-radius: 8px; font-size: 0.95rem; transition: border-color 0.2s;
+    }
+    .form-group input:focus { outline: none; border-color: var(--primary); }
+
+    /* Modal Generica */
+    .modal {
+      display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+      background: rgba(15, 23, 42, 0.6); backdrop-filter: blur(4px);
+      align-items: center; justify-content: center; z-index: 50; padding: 20px;
+    }
+    .modal-content {
+      background: var(--surface); padding: 32px; border-radius: 16px;
+      width: 440px; max-width: 100%; box-shadow: 0 20px 25px -5px rgba(0,0,0,0.1);
+    }
   </style>
 </head>
 <body>
 
-  <!-- Tela de Login (Exibida quando não há token salvo) -->
-  <div id="loginScreen" class="modal" style="display: flex;">
-    <div class="modal-content">
-      <h2 style="margin-bottom: 15px;">Login no Sistema</h2>
+  <!-- Tela de Login -->
+  <div id="loginScreen" class="login-container">
+    <div class="login-card">
+      <div class="logo-icon"><i class="fa-solid fa-key"></i></div>
+      <h2 style="font-size: 1.5rem; margin-bottom: 8px;">Acesso ao Sistema</h2>
+      <p style="color: var(--text-muted); font-size: 0.875rem; margin-bottom: 24px;">Entre com suas credenciais de operador</p>
+      
       <form id="loginForm">
         <div class="form-group">
-          <label>E-mail</label>
+          <label>E-mail Corporativo</label>
           <input type="email" id="loginEmail" required placeholder="admin@empresa.com">
         </div>
         <div class="form-group">
           <label>Senha</label>
           <input type="password" id="loginSenha" required placeholder="••••••••">
         </div>
-        <button type="submit" class="btn btn-primary" style="width: 100%; padding: 10px;">Entrar</button>
+        <button type="submit" class="btn btn-primary" style="width: 100%; justify-content: center; padding: 12px;">
+          Entrar no Painel
+        </button>
       </form>
     </div>
   </div>
 
-  <!-- Painel Principal (Exibido após autenticação) -->
+  <!-- Painel Principal -->
   <div id="mainDashboard" style="display: none;">
     <header>
-      <h1>Controle de Chaves</h1>
-      <div>
-        <span>Operador Logado: <strong id="operatorName">...</strong></span>
-        <button class="btn btn-danger" style="margin-left: 15px;" onclick="logout()">Sair</button>
+      <div class="brand">
+        <i class="fa-solid fa-key"></i>
+        <span>Controle de Chaves</span>
+      </div>
+      <div class="user-profile">
+        <span><i class="fa-regular fa-user"></i> <strong id="operatorName">Operador</strong></span>
+        <button class="btn btn-danger" onclick="logout()"><i class="fa-solid fa-right-from-bracket"></i> Sair</button>
       </div>
     </header>
 
-    <div id="alertBanner" class="alert-banner">
-      <strong>⚠️ Atenção: Chaves em Atraso</strong>
-      <ul id="alertList" style="margin-top: 8px; padding-left: 20px;"></ul>
-    </div>
+    <main>
+      <!-- Alerta de Chaves Atrasadas -->
+      <div id="alertBanner" class="alert-banner">
+        <h4><i class="fa-solid fa-triangle-exclamation"></i> Chaves em Atraso Identificadas</h4>
+        <ul id="alertList" class="alert-list"></ul>
+      </div>
 
-    <div class="grid-sectors" id="sectorsContainer"></div>
+      <!-- Resumo do Dashboard -->
+      <div class="stats-grid">
+        <div class="stat-card">
+          <div class="stat-icon" style="background: #e0e7ff; color: #4338ca;"><i class="fa-solid fa-vault"></i></div>
+          <div>
+            <span style="font-size: 0.8rem; color: var(--text-muted);">Total de Setores</span>
+            <h3 id="totalSectors">0</h3>
+          </div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-icon" style="background: var(--success-bg); color: var(--success-text);"><i class="fa-solid fa-check"></i></div>
+          <div>
+            <span style="font-size: 0.8rem; color: var(--text-muted);">Chaves Disponíveis</span>
+            <h3 id="totalAvailable">0</h3>
+          </div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-icon" style="background: var(--warning-bg); color: var(--warning-text);"><i class="fa-solid fa-hand-holding"></i></div>
+          <div>
+            <span style="font-size: 0.8rem; color: var(--text-muted);">Chaves Emprestadas</span>
+            <h3 id="totalBorrowed">0</h3>
+          </div>
+        </div>
+      </div>
+
+      <!-- Grid dos Setores e Chaves -->
+      <div class="grid-sectors" id="sectorsContainer"></div>
+    </main>
   </div>
 
-  <!-- Modal de Empréstimo -->
+  <!-- Modal para Registrar Empréstimo -->
   <div id="loanModal" class="modal">
     <div class="modal-content">
-      <h3 style="margin-bottom: 15px;">Registrar Empréstimo</h3>
+      <h3 style="margin-bottom: 20px;"><i class="fa-solid fa-hand-holding-hand"></i> Registrar Empréstimo</h3>
       <form id="loanForm">
         <input type="hidden" id="loanKeyId">
         <div class="form-group">
-          <label>Chave Identificadora</label>
-          <input type="text" id="loanKeyNum" readonly style="background: #eee;">
+          <label>Chave Selecionada</label>
+          <input type="text" id="loanKeyNum" readonly style="background: #f1f5f9; color: #64748b; font-weight: 600;">
         </div>
         <div class="form-group">
           <label>ID da Pessoa Autorizada</label>
-          <input type="number" id="loanPersonId" required placeholder="Ex: 1">
+          <input type="number" id="loanPersonId" required placeholder="Digite o ID cadastrado (ex: 1)">
         </div>
         <div class="form-group">
           <label>Previsão de Devolução</label>
           <input type="datetime-local" id="loanReturnDate" required>
         </div>
-        <div style="display: flex; justify-content: flex-end; gap: 10px;">
+        <div style="display: flex; justify-content: flex-end; gap: 12px; margin-top: 24px;">
           <button type="button" class="btn btn-secondary" onclick="closeModal()">Cancelar</button>
           <button type="submit" class="btn btn-primary">Confirmar Saída</button>
         </div>
@@ -119,7 +274,6 @@
         const data = await res.json();
         if (!res.ok) throw new Error(data.erro || 'Falha na autenticação');
 
-        // Salva token e dados do usuário no navegador
         localStorage.setItem('jwt_token', data.token);
         localStorage.setItem('user_name', data.usuario.nome);
 
@@ -142,7 +296,6 @@
       window.location.reload();
     }
 
-    // Função Auxiliar para Requisições Autenticadas
     function getAuthHeaders() {
       const token = localStorage.getItem('jwt_token');
       return {
@@ -159,7 +312,9 @@
 
         if (!res.ok) throw new Error(data.erro || 'Erro ao buscar dados');
 
-        // Agrupa o resultado plano da API por setores
+        let totalAvailable = 0;
+        let totalBorrowed = 0;
+
         const sectorsMap = {};
         data.forEach(item => {
           if (!sectorsMap[item.setor_nome]) {
@@ -167,25 +322,38 @@
           }
           if (item.chave_id) {
             sectorsMap[item.setor_nome].push(item);
+            if (item.chave_status === 'guardada') totalAvailable++;
+            if (item.chave_status === 'emprestada') totalBorrowed++;
           }
         });
+
+        document.getElementById('totalSectors').innerText = Object.keys(sectorsMap).length;
+        document.getElementById('totalAvailable').innerText = totalAvailable;
+        document.getElementById('totalBorrowed').innerText = totalBorrowed;
 
         const container = document.getElementById('sectorsContainer');
         container.innerHTML = Object.keys(sectorsMap).map(sectorName => `
           <div class="sector-card">
-            <div class="sector-title">${sectorName}</div>
+            <div class="sector-title">
+              <span><i class="fa-regular fa-folder-closed"></i> ${sectorName}</span>
+              <small style="font-size: 0.75rem; color: var(--text-muted);">${sectorsMap[sectorName].length} chave(s)</small>
+            </div>
             <ul class="key-list">
               ${sectorsMap[sectorName].map(key => `
                 <li class="key-item">
-                  <div>
-                    <strong>${key.numero_identificador}</strong> - ${key.nome_chave}<br>
-                    <span class="badge ${key.chave_status === 'guardada' ? 'badge-guardada' : 'badge-emprestada'}">${key.chave_status}</span>
-                    ${key.pessoa_com_chave ? `<br><small>Com: ${key.pessoa_com_chave}</small>` : ''}
+                  <div class="key-info">
+                    <strong>${key.numero_identificador}</strong> - ${key.nome_chave}
+                    <div>
+                      <span class="badge ${key.chave_status === 'guardada' ? 'badge-guardada' : 'badge-emprestada'}">
+                        ${key.chave_status}
+                      </span>
+                    </div>
+                    ${key.pessoa_com_chave ? `<small><i class="fa-regular fa-user"></i> Com: ${key.pessoa_com_chave}</small>` : ''}
                   </div>
                   <div>
                     ${key.chave_status === 'guardada' 
-                      ? `<button class="btn btn-primary" onclick="openLoanModal(${key.chave_id}, '${key.numero_identificador}')">Retirar</button>`
-                      : `<button class="btn btn-secondary" onclick="returnKey(${key.emprestimo_id})">Devolver</button>`
+                      ? `<button class="btn btn-primary" onclick="openLoanModal(${key.chave_id}, '${key.numero_identificador}')"><i class="fa-solid fa-arrow-right-from-bracket"></i> Retirar</button>`
+                      : `<button class="btn btn-secondary" onclick="returnKey(${key.emprestimo_id})"><i class="fa-solid fa-arrow-rotate-left"></i> Devolver</button>`
                     }
                   </div>
                 </li>
