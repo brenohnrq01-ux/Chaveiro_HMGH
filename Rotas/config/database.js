@@ -5,7 +5,6 @@ const pool = new Pool({
   connectionString: process.env.DATABASE_URL,
   // O SSL é necessário quando o banco estiver hospedado no Render/Supabase/ElephantSQL
   ssl: process.env.DATABASE_URL ? { rejectUnauthorized: false } : false
-  client_encoding: 'UTF8'
 });
 
 module.exports = pool;
