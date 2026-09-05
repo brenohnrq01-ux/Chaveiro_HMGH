@@ -25,7 +25,6 @@ app.post('/api/login', async (req, res) => {
 
     const usuario = result.rows[0];
     
-    // Verifique se a coluna no seu banco se chama 'senha' ou 'senha_hash'
     if (usuario.senha !== senha) {
       return res.status(401).json({ erro: 'Senha incorreta' });
     }
@@ -45,7 +44,7 @@ app.post('/api/login', async (req, res) => {
   }
 });
 
-// Rota do Dashboard (Com o prefixo /api/)
+// Rota do Dashboard (Painel Principal)
 app.get('/api/dashboard', async (req, res) => {
   try {
     const query = `
@@ -70,7 +69,7 @@ app.get('/api/dashboard', async (req, res) => {
   }
 });
 
-// Rota de Chaves Atrasadas (Com o prefixo /api/)
+// Rota de Chaves Atrasadas
 app.get('/api/emprestimos/atrasados', async (req, res) => {
   try {
     const query = `
@@ -92,87 +91,47 @@ app.get('/api/emprestimos/atrasados', async (req, res) => {
   }
 });
 
-// Listener local para testes em desenvolvimento (ignorado pela Vercel)
-if (process.env.NODE_ENV !== 'production') {
-  app.listen(3000, () => {
-    console.log('Servidor rodando localmente na porta 3000');
-  });
-}
-
-// OBRIGATÓRIO PARA A VERCEL
-module.exports = app;const express = require('express');
-const { Pool } = require('pg');
-
-const app = express();
-
-// Middlewares essenciais
-app.use(express.json());
-
-// Configuração do Banco de Dados com Supabase (Pooler + SSL)
-const pool = new Pool({
-  connectionString: process.env.DATABASE_URL,
-  ssl: process.env.DATABASE_URL ? { rejectUnauthorized: false } : false
-});
-
-app.post('/api/login', async (req, res) => {
+// Rota para Registrar Empréstimo
+app.post('/api/emprestimos', async (req, res) => {
   try {
-    const { email, senha } = req.body;
-    
-    const result = await pool.query('SELECT * FROM usuarios WHERE email = $1', [email]);
-    
-    if (result.rows.length === 0) {
-      return res.status(401).json({ erro: 'Usuário não encontrado' });
-    }
+    const { chave_id, pessoa_autorizada_id, data_previsao_devolucao } = req.body;
 
-    const usuario = result.rows[0];
-    
-    // Comparação direta de texto puro (sem bcrypt)
-    if (usuario.senha_hash !== senha) {
-      return res.status(401).json({ erro: 'Senha incorreta' });
-    }
+    await pool.query(
+      `INSERT INTO emprestimos (chave_id, pessoa_autorizada_id, data_previsao_devolucao, data_emprestimo) 
+       VALUES ($1, $2, $3, NOW())`,
+      [chave_id, pessoa_autorizada_id, data_previsao_devolucao]
+    );
 
-    return res.json({ 
-      sucesso: true, 
-      usuario: { nome: usuario.nome, email: usuario.email } 
-    });
+    await pool.query(
+      `UPDATE chaves SET status = 'emprestada' WHERE id = $1`,
+      [chave_id]
+    );
 
+    return res.json({ sucesso: true });
   } catch (err) {
-    console.error("Erro interno no login:", err);
-    return res.status(500).json({ 
-      erro: 'Erro interno no servidor', 
-      detalhes: err.message 
-    });
+    console.error("Erro ao registrar empréstimo:", err);
+    return res.status(500).json({ erro: err.message });
   }
 });
 
-// Rota do Dashboard (Painel Principal)
-app.get('/dashboard', async (req, res) => {
+// Rota para Registrar Devolução
+app.post('/api/emprestimos/:id/devolucao', async (req, res) => {
   try {
-    // Exemplo de consultas básicas ao banco para preencher os cards
-    const setoresCount = await pool.query('SELECT COUNT(*) FROM setores');
-    const chavesDisponiveis = await pool.query("SELECT COUNT(*) FROM chaves WHERE status = 'disponivel'");
-    const chavesEmprestadas = await pool.query("SELECT COUNT(*) FROM chaves WHERE status = 'emprestada'");
+    const emprestimoId = req.params.id;
 
-    return res.json({
-      totalSetores: parseInt(setoresCount.rows[0].count),
-      chavesDisponiveis: parseInt(chavesDisponiveis.rows[0].count),
-      chavesEmprestadas: parseInt(chavesEmprestadas.rows[0].count)
-    });
-  } catch (err) {
-    console.error("Erro ao carregar dashboard:", err);
-    return res.status(500).json({ erro: 'Erro interno ao carregar dados do painel' });
-  }
-});
+    const empResult = await pool.query('SELECT chave_id FROM emprestimos WHERE id = $1', [emprestimoId]);
+    if (empResult.rows.length === 0) {
+      return res.status(404).json({ erro: 'Empréstimo não encontrado' });
+    }
+    const chaveId = empResult.rows[0].chave_id;
 
-// Rota de Chaves Atrasadas
-app.get('/atrasados', async (req, res) => {
-  try {
-    // Ajuste a query de acordo com as colunas da sua tabela de empréstimos/chaves
-    const result = await pool.query("SELECT * FROM emprestimos WHERE status = 'atrasado'");
-    return res.json(result.rows);
+    await pool.query('UPDATE emprestimos SET data_devolucao = NOW() WHERE id = $1', [emprestimoId]);
+    await pool.query("UPDATE chaves SET status = 'guardada' WHERE id = $1", [chaveId]);
+
+    return res.json({ sucesso: true });
   } catch (err) {
-    console.error("Erro ao buscar atrasados:", err);
-    return res.status(500).json({ erro: 'Erro interno ao buscar chaves atrasadas' });
+    console.error("Erro ao registrar devolução:", err);
+    return res.status(500).json({ erro: err.message });
   }
 });
 
@@ -183,5 +142,5 @@ if (process.env.NODE_ENV !== 'production') {
   });
 }
 
-// OBRIGATÓRIO PARA A VERCEL
+// OBRIGATÓRIO PARA A VERCEL (Deve ser sempre a última linha)
 module.exports = app;
