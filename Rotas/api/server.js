@@ -237,10 +237,8 @@ app.use((req, res) => {
   res.sendFile(path.join(rootDir, 'index.html'));
 });
 
-/*// Porta do servidor
-const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => {
-  console.log(`Servidor rodando na porta ${PORT}`);
-});
-*/
+// Porta do servidor
+if (process.env.NODE_ENV !== 'production') {
+  app.listen(3000, () => console.log('Servidor rodando localmente na porta 3000'));
+}
 module.exports = app;
