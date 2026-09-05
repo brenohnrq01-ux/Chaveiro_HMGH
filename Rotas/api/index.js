@@ -1,6 +1,5 @@
 const express = require('express');
 const { Pool } = require('pg');
-const bcrypt = require('bcryptjs');
 
 const app = express();
 
@@ -26,12 +25,8 @@ app.post('/api/login', async (req, res) => {
 
     const usuario = result.rows[0];
     
-    const bcrypt = require('bcrypt');
-
-    // Dentro da sua rota de login (/api/login):
-    const senhaValida = await bcrypt.compare(senha, usuario.senha);
-
-    if (!senhaValida) {
+    // Adicione aqui a sua validação de senha (ex: bcrypt ou comparação direta se aplicável)
+    if (usuario.senha !== senha) {
       return res.status(401).json({ erro: 'Senha incorreta' });
     }
 
