@@ -12,7 +12,6 @@ const pool = new Pool({
   ssl: process.env.DATABASE_URL ? { rejectUnauthorized: false } : false
 });
 
-// Rota de Login
 app.post('/api/login', async (req, res) => {
   try {
     const { email, senha } = req.body;
@@ -25,8 +24,8 @@ app.post('/api/login', async (req, res) => {
 
     const usuario = result.rows[0];
     
-    // Adicione aqui a sua validação de senha (ex: bcrypt ou comparação direta se aplicável)
-    if (usuario.senha !== senha) {
+    // Comparação direta de texto puro (sem bcrypt)
+    if (usuario.senha_hash !== senha) {
       return res.status(401).json({ erro: 'Senha incorreta' });
     }
 
