@@ -25,7 +25,7 @@ app.post('/api/login', async (req, res) => {
 
     const usuario = result.rows[0];
     
-    if (usuario.senha !== senha) {
+    if (usuario.senha_hash !== senha) {
       return res.status(401).json({ erro: 'Senha incorreta' });
     }
 
