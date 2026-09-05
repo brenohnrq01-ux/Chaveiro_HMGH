@@ -44,7 +44,7 @@ app.post('/api/login', async (req, res) => {
   }
 });
 
-// Rota do Dashboard (Painel Principal)
+// Rota do Dashboard (Painel Principal corrigida)
 app.get('/api/dashboard', async (req, res) => {
   try {
     const query = `
@@ -52,7 +52,7 @@ app.get('/api/dashboard', async (req, res) => {
         s.nome AS setor_nome,
         c.id AS chave_id,
         c.numero_identificador,
-        c.nome AS nome_chave,
+        c.nome_chave AS nome_chave,
         c.status AS chave_status,
         p.nome AS pessoa_com_chave,
         e.id AS emprestimo_id
@@ -65,7 +65,29 @@ app.get('/api/dashboard', async (req, res) => {
     return res.json(result.rows);
   } catch (err) {
     console.error("Erro ao carregar dashboard:", err);
-    return res.status(500).json({ erro: 'Erro interno ao carregar dados do painel' });
+    return res.status(500).json({ erro: 'Erro interno ao carregar dados do painel: ' + err.message });
+  }
+});
+
+// Rota de Chaves Atrasadas corrigida
+app.get('/api/emprestimos/atrasados', async (req, res) => {
+  try {
+    const query = `
+      SELECT 
+        c.numero_identificador,
+        c.nome_chave AS nome_chave,
+        p.nome AS pessoa_nome,
+        p.telefone AS pessoa_telefone
+      FROM emprestimos e
+      JOIN chaves c ON c.id = e.chave_id
+      JOIN pessoas_autorizadas p ON p.id = e.pessoa_autorizada_id
+      WHERE e.data_devolucao IS NULL AND e.data_previsao_devolucao < NOW()
+    `;
+    const result = await pool.query(query);
+    return res.json(result.rows);
+  } catch (err) {
+    console.error("Erro ao buscar atrasados:", err);
+    return res.status(500).json({ erro: 'Erro interno ao buscar chaves atrasadas: ' + err.message });
   }
 });
 
