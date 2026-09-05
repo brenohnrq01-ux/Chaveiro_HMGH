@@ -25,8 +25,12 @@ app.post('/api/login', async (req, res) => {
 
     const usuario = result.rows[0];
     
-    // Adicione aqui a sua validação de senha (ex: bcrypt ou comparação direta se aplicável)
-    if (usuario.senha !== senha) {
+    const bcrypt = require('bcrypt');
+
+    // Dentro da sua rota de login (/api/login):
+    const senhaValida = await bcrypt.compare(senha, usuario.senha);
+
+    if (!senhaValida) {
       return res.status(401).json({ erro: 'Senha incorreta' });
     }
 
