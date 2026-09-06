@@ -12,12 +12,93 @@ const pool = new Pool({
   ssl: process.env.DATABASE_URL ? { rejectUnauthorized: false } : false
 });
 
-// Rota de Login
-app.post('/api/emprestimos', async (req, res) => {
+// Rota de Login aceita tanto /api/login quanto /login
+app.post(['/api/login', '/login'], async (req, res) => {
+  try {
+    const { email, senha } = req.body;
+    
+    const result = await pool.query('SELECT * FROM usuarios WHERE email = $1', [email]);
+    
+    if (result.rows.length === 0) {
+      return res.status(401).json({ erro: 'Usuário não encontrado' });
+    }
+
+    const usuario = result.rows[0];
+    
+    if (usuario.senha_hash !== senha && usuario.senha !== senha) {
+      return res.status(401).json({ erro: 'Senha incorreta' });
+    }
+
+    return res.json({ 
+      sucesso: true,
+      token: 'token_jwt_simulado_' + Date.now(),
+      usuario: { 
+        id: usuario.id, 
+        nome: usuario.nome, 
+        email: usuario.email 
+      } 
+    });
+
+  } catch (err) {
+    console.error("Erro interno no login:", err);
+    return res.status(500).json({ 
+      erro: 'Erro interno no servidor', 
+      detalhes: err.message 
+    });
+  }
+});
+
+// Rota do Dashboard aceita /api/dashboard e /dashboard
+app.get(['/api/dashboard', '/dashboard'], async (req, res) => {
+  try {
+    const query = `
+      SELECT 
+        s.nome AS setor_nome,
+        c.id AS chave_id,
+        c.numero_identificador,
+        c.nome_chave AS nome_chave,
+        c.status AS chave_status,
+        p.nome AS pessoa_com_chave,
+        e.id AS emprestimo_id
+      FROM setores s
+      LEFT JOIN chaves c ON c.setor_id = s.id
+      LEFT JOIN emprestimos e ON e.chave_id = c.id AND e.data_devolucao IS NULL
+      LEFT JOIN pessoas_autorizadas p ON p.id = e.pessoa_autorizada_id
+    `;
+    const result = await pool.query(query);
+    return res.json(result.rows);
+  } catch (err) {
+    console.error("Erro ao carregar dashboard:", err);
+    return res.status(500).json({ erro: 'Erro interno ao carregar dados do painel: ' + err.message });
+  }
+});
+
+// Rota de Atrasados aceita /api/emprestimos/atrasados e /emprestimos/atrasados
+app.get(['/api/emprestimos/atrasados', '/emprestimos/atrasados'], async (req, res) => {
+  try {
+    const query = `
+      SELECT 
+        c.numero_identificador,
+        c.nome_chave AS nome_chave,
+        p.nome AS pessoa_nome,
+        p.telefone AS pessoa_telefone
+      FROM emprestimos e
+      JOIN chaves c ON c.id = e.chave_id
+      JOIN pessoas_autorizadas p ON p.id = e.pessoa_autorizada_id
+      WHERE e.data_devolucao IS NULL AND e.data_previsao_devolucao < NOW()
+    `;
+    const result = await pool.query(query);
+    return res.json(result.rows);
+  } catch (err) {
+    console.error("Erro ao buscar atrasados:", err);
+    return res.status(500).json({ erro: 'Erro interno ao buscar chaves atrasadas: ' + err.message });
+  }
+});
+
+// Rota de Empréstimos aceita /api/emprestimos e /emprestimos
+app.post(['/api/emprestimos', '/emprestimos'], async (req, res) => {
   try {
     const { chave_id, pessoa_autorizada_id, data_previsao_devolucao, usuario_operador_id } = req.body;
-
-    // Trata null, undefined ou NaN, definindo 1 (ID do Admin) como fallback obrigatório
     const operadorId = Number(usuario_operador_id) || 1;
 
     await pool.query(
