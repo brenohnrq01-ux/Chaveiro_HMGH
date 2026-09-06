@@ -12,7 +12,7 @@ const pool = new Pool({
   ssl: process.env.DATABASE_URL ? { rejectUnauthorized: false } : false
 });
 
-// Rota de Login (Texto Puro)
+// Rota de Login
 app.post('/api/login', async (req, res) => {
   try {
     const { email, senha } = req.body;
@@ -25,14 +25,18 @@ app.post('/api/login', async (req, res) => {
 
     const usuario = result.rows[0];
     
-    if (usuario.senha !== senha) {
+    if (usuario.senha_hash !== senha && usuario.senha !== senha) {
       return res.status(401).json({ erro: 'Senha incorreta' });
     }
 
     return res.json({ 
       sucesso: true,
       token: 'token_jwt_simulado_' + Date.now(),
-      usuario: { nome: usuario.nome, email: usuario.email } 
+      usuario: { 
+        id: usuario.id, 
+        nome: usuario.nome, 
+        email: usuario.email 
+      } 
     });
 
   } catch (err) {
