@@ -13,38 +13,28 @@ const pool = new Pool({
 });
 
 // Rota de Login
-app.post('/api/login', async (req, res) => {
+app.post('/api/emprestimos', async (req, res) => {
   try {
-    const { email, senha } = req.body;
-    
-    const result = await pool.query('SELECT * FROM usuarios WHERE email = $1', [email]);
-    
-    if (result.rows.length === 0) {
-      return res.status(401).json({ erro: 'Usuário não encontrado' });
-    }
+    const { chave_id, pessoa_autorizada_id, data_previsao_devolucao, usuario_operador_id } = req.body;
 
-    const usuario = result.rows[0];
-    
-    if (usuario.senha_hash !== senha && usuario.senha !== senha) {
-      return res.status(401).json({ erro: 'Senha incorreta' });
-    }
+    // Trata null, undefined ou NaN, definindo 1 (ID do Admin) como fallback obrigatório
+    const operadorId = Number(usuario_operador_id) || 1;
 
-    return res.json({ 
-      sucesso: true,
-      token: 'token_jwt_simulado_' + Date.now(),
-      usuario: { 
-        id: usuario.id, 
-        nome: usuario.nome, 
-        email: usuario.email 
-      } 
-    });
+    await pool.query(
+      `INSERT INTO emprestimos (chave_id, pessoa_autorizada_id, usuario_operador_id, data_previsao_devolucao, data_emprestimo) 
+       VALUES ($1, $2, $3, $4, NOW())`,
+      [chave_id, pessoa_autorizada_id, operadorId, data_previsao_devolucao]
+    );
 
+    await pool.query(
+      `UPDATE chaves SET status = 'emprestada' WHERE id = $1`,
+      [chave_id]
+    );
+
+    return res.json({ sucesso: true });
   } catch (err) {
-    console.error("Erro interno no login:", err);
-    return res.status(500).json({ 
-      erro: 'Erro interno no servidor', 
-      detalhes: err.message 
-    });
+    console.error("Erro ao registrar empréstimo:", err);
+    return res.status(500).json({ erro: err.message });
   }
 });
 
