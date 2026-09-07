@@ -59,7 +59,7 @@
     }
     .brand { display: flex; align-items: center; gap: 12px; font-weight: 700; font-size: 1.25rem; color: var(--text-main); }
     .brand i { color: var(--primary); font-size: 1.5rem; }
-    .user-profile { display: flex; align-items: center; gap: 16px; }
+    .user-profile { display: flex; align-items: center; gap: 12px; }
 
     /* Layout Principal */
     main { max-width: 1400px; margin: 32px auto; padding: 0 24px; }
@@ -130,11 +130,11 @@
     /* Campos de Formulário */
     .form-group { margin-bottom: 20px; text-align: left; }
     .form-group label { display: block; font-weight: 500; margin-bottom: 6px; font-size: 0.875rem; color: var(--text-main); }
-    .form-group input {
+    .form-group input, .form-group select {
       width: 100%; padding: 10px 14px; border: 1px solid var(--border);
       border-radius: 8px; font-size: 0.95rem; transition: border-color 0.2s;
     }
-    .form-group input:focus { outline: none; border-color: var(--primary); }
+    .form-group input:focus, .form-group select:focus { outline: none; border-color: var(--primary); }
 
     /* Modal Generica */
     .modal {
@@ -181,6 +181,7 @@
         <span>Controle de Chaves</span>
       </div>
       <div class="user-profile">
+        <button class="btn btn-secondary" onclick="openReportModal()"><i class="fa-solid fa-file-csv"></i> Relatório Mensal</button>
         <span><i class="fa-regular fa-user"></i> <strong id="operatorName">Operador</strong></span>
         <button class="btn btn-danger" onclick="logout()"><i class="fa-solid fa-right-from-bracket"></i> Sair</button>
       </div>
@@ -249,6 +250,40 @@
     </div>
   </div>
 
+  <!-- Modal para Relatório Mensal -->
+  <div id="reportModal" class="modal">
+    <div class="modal-content">
+      <h3 style="margin-bottom: 20px;"><i class="fa-solid fa-file-lines"></i> Relatório Mensal de Empréstimos</h3>
+      <form id="reportForm">
+        <div class="form-group">
+          <label>Mês de Referência</label>
+          <select id="reportMonth" required>
+            <option value="01">Janeiro</option>
+            <option value="02">Fevereiro</option>
+            <option value="03">Março</option>
+            <option value="04">Abril</option>
+            <option value="05">Maio</option>
+            <option value="06">Junho</option>
+            <option value="07">Julho</option>
+            <option value="08">Agosto</option>
+            <option value="09">Setembro</option>
+            <option value="10">Outubro</option>
+            <option value="11">Novembro</option>
+            <option value="12">Dezembro</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Ano</label>
+          <input type="number" id="reportYear" required min="2020" max="2100">
+        </div>
+        <div style="display: flex; justify-content: flex-end; gap: 12px; margin-top: 24px;">
+          <button type="button" class="btn btn-secondary" onclick="closeReportModal()">Cancelar</button>
+          <button type="submit" class="btn btn-primary"><i class="fa-solid fa-download"></i> Baixar Planilha CSV</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
   <script>
     const API_URL = window.location.origin + '/api';
 
@@ -260,37 +295,37 @@
     });
 
     // 1. AÇÃO DE LOGIN
-  document.getElementById('loginForm').addEventListener('submit', async (e) => {
-  e.preventDefault();
-  const email = document.getElementById('loginEmail').value;
-  const senha = document.getElementById('loginSenha').value;
+    document.getElementById('loginForm').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const email = document.getElementById('loginEmail').value;
+      const senha = document.getElementById('loginSenha').value;
 
-  try {
-    const res = await fetch(`${API_URL}/login`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ email, senha })
+      try {
+        const res = await fetch(`${API_URL}/login`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ email, senha })
+        });
+
+        const text = await res.text();
+        let data;
+        try {
+          data = JSON.parse(text);
+        } catch (jsonErr) {
+          throw new Error(`Servidor retornou resposta inválida (${res.status}): ${text.substring(0, 100)}...`);
+        }
+
+        if (!res.ok) throw new Error(data.erro || 'Falha na autenticação');
+
+        localStorage.setItem('jwt_token', data.token);
+        localStorage.setItem('user_name', data.usuario.nome);
+        localStorage.setItem('user_id', data.usuario.id);
+
+        showDashboard();
+      } catch (err) {
+        alert(`Erro de Login: ${err.message}`);
+      }
     });
-
-    // Captura o texto bruto primeiro para tratar erros não-JSON
-    const text = await res.text();
-    let data;
-    try {
-      data = JSON.parse(text);
-    } catch (jsonErr) {
-      throw new Error(`Servidor retornou resposta inválida (${res.status}): ${text.substring(0, 100)}...`);
-    }
-
-    if (!res.ok) throw new Error(data.erro || 'Falha na autenticação');
-
-    localStorage.setItem('jwt_token', data.token);
-    localStorage.setItem('user_name', data.usuario.nome);
-
-    showDashboard();
-  } catch (err) {
-    alert(`Erro de Login: ${err.message}`);
-  }
-});
 
     function showDashboard() {
       document.getElementById('loginScreen').style.display = 'none';
@@ -397,7 +432,8 @@
       const payload = {
         chave_id: parseInt(document.getElementById('loanKeyId').value),
         pessoa_autorizada_id: parseInt(document.getElementById('loanPersonId').value),
-        data_previsao_devolucao: document.getElementById('loanReturnDate').value
+        data_previsao_devolucao: document.getElementById('loanReturnDate').value,
+        usuario_operador_id: parseInt(localStorage.getItem('user_id')) || 1
       };
 
       try {
@@ -456,6 +492,55 @@
         console.error('Erro ao verificar atrasos:', err);
       }
     }
+
+    // 6. RELATÓRIO MENSAL (MODAL E DOWNLOAD DE CSV)
+    function openReportModal() {
+      const agora = new Date();
+      const mesAtual = String(agora.getMonth() + 1).padStart(2, '0');
+      document.getElementById('reportMonth').value = mesAtual;
+      document.getElementById('reportYear').value = agora.getFullYear();
+      document.getElementById('reportModal').style.display = 'flex';
+    }
+
+    function closeReportModal() {
+      document.getElementById('reportModal').style.display = 'none';
+    }
+
+    document.getElementById('reportForm').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const mes = document.getElementById('reportMonth').value;
+      const ano = document.getElementById('reportYear').value;
+
+      try {
+        const res = await fetch(`${API_URL}/relatorios/mensal?mes=${mes}&ano=${ano}`, {
+          headers: getAuthHeaders()
+        });
+        const result = await res.json();
+
+        if (!res.ok) throw new Error(result.erro || 'Erro ao gerar relatório');
+
+        if (!result.dados || result.dados.length === 0) {
+          alert('Nenhum empréstimo registrado para este mês/ano.');
+          return;
+        }
+
+        let csv = "Código Chave;Nome da Chave;Retirado por;Telefone;Dia Empréstimo;Horário;Devolução;Operador\n";
+        
+        result.dados.forEach(row => {
+          csv += `"${row.numero_identificador}";"${row.nome_chave}";"${row.pessoa_nome}";"${row.pessoa_telefone || ''}";"${row.dia_emprestimo}";"${row.hora_emprestimo}";"${row.data_devolucao || 'Pendente'}";"${row.operador_nome || 'N/I'}"\n`;
+        });
+
+        const blob = new Blob(["\ufeff" + csv], { type: 'text/csv;charset=utf-8;' });
+        const link = document.createElement("a");
+        link.href = URL.createObjectURL(blob);
+        link.download = `Relatorio_Chaves_${result.mes}_${result.ano}.csv`;
+        link.click();
+
+        closeReportModal();
+      } catch (err) {
+        alert(`Erro ao gerar relatório: ${err.message}`);
+      }
+    });
   </script>
 </body>
 </html>
