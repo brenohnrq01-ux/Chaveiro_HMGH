@@ -232,6 +232,52 @@ app.post('/api/emprestimos/:id/devolucao', async (req, res) => {
   }
 });
 
+// Rota para Relatório Mensal de Empréstimos
+app.get(['/api/relatorios/mensal', '/relatorios/mensal'], async (req, res) => {
+  try {
+    // Permite passar mes (1-12) e ano via query param, ou pega o mês atual por padrão
+    const { mes, ano } = req.query;
+    
+    // Se não informados, assume o ano e mês atuais
+    const agora = new Date();
+    const anoFiltro = ano || agora.getFullYear();
+    const mesFiltro = mes ? String(mes).padStart(2, '0') : String(agora.getMonth() + 1).padStart(2, '0');
+
+    const dataReferencia = `${anoFiltro}-${mesFiltro}-01`;
+
+    const query = `
+      SELECT 
+        e.id AS emprestimo_id,
+        c.numero_identificador,
+        c.nome_chave,
+        p.nome AS pessoa_nome,
+        p.telefone AS pessoa_telefone,
+        TO_CHAR(e.data_emprestimo, 'DD/MM/YYYY') AS dia_emprestimo,
+        TO_CHAR(e.data_emprestimo, 'HH24:MI') AS hora_emprestimo,
+        TO_CHAR(e.data_devolucao, 'DD/MM/YYYY HH24:MI') AS data_devolucao,
+        u.nome AS operador_nome
+      FROM emprestimos e
+      JOIN chaves c ON c.id = e.chave_id
+      JOIN pessoas_autorizadas p ON p.id = e.pessoa_autorizada_id
+      LEFT JOIN usuarios u ON u.id = e.usuario_operador_id
+      WHERE date_trunc('month', e.data_emprestimo) = date_trunc('month', $1::date)
+      ORDER BY e.data_emprestimo DESC
+    `;
+
+    const result = await pool.query(query, [dataReferencia]);
+    return res.json({
+      mes: mesFiltro,
+      ano: anoFiltro,
+      total_registros: result.rowCount,
+      dados: result.rows
+    });
+
+  } catch (err) {
+    console.error("Erro ao gerar relatório mensal:", err);
+    return res.status(500).json({ erro: 'Erro ao gerar relatório mensal: ' + err.message });
+  }
+});
+
 // Listener local para testes em desenvolvimento (ignorado pela Vercel)
 if (process.env.NODE_ENV !== 'production') {
   app.listen(3000, () => {
