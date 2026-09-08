@@ -485,7 +485,7 @@
           const list = document.getElementById('alertList');
           banner.style.display = 'block';
           list.innerHTML = data.map(k => `
-            <li><strong>${k.numero_identificador} (${k.nome_chave})</strong> com ${k.pessoa_nome} (Tel: ${k.pessoa_setor || 'N/A'})</li>
+            <li><strong>${k.numero_identificador} (${k.nome_chave})</strong> com ${k.pessoa_nome} (Setor: ${k.pessoa_setor || 'N/A'})</li>
           `).join('');
         }
       } catch (err) {
