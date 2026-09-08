@@ -207,7 +207,7 @@ app.get('/api/emprestimos/atrasados', autenticarToken, async (req, res) => {
         c.numero_identificador,
         c.nome_chave,
         p.nome AS pessoa_nome,
-        p.telefone AS pessoa_telefone,
+        p.setor AS pessoa_setor,
         e.data_emprestimo,
         e.data_previsao_devolucao
       FROM emprestimos e
