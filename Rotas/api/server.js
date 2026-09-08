@@ -127,10 +127,11 @@ app.post('/api/emprestimos', autenticarToken, async (req, res) => {
       return res.status(400).json({ erro: 'Esta chave já está emprestada.' });
     }
 
+    // ADICIONADO data_emprestimo = NOW() para garantir que a data seja gravada corretamente
     const novoEmprestimo = await client.query(
       `INSERT INTO emprestimos 
-        (chave_id, pessoa_autorizada_id, usuario_operador_id, data_previsao_devolucao, status) 
-       VALUES ($1, $2, $3, $4, 'ativo') 
+        (chave_id, pessoa_autorizada_id, usuario_operador_id, data_previsao_devolucao, data_emprestimo, status) 
+       VALUES ($1, $2, $3, $4, NOW(), 'ativo') 
        RETURNING *`,
       [chave_id, pessoa_autorizada_id, usuario_operador_id, data_previsao_devolucao]
     );
