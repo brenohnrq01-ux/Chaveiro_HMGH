@@ -485,7 +485,7 @@
           const list = document.getElementById('alertList');
           banner.style.display = 'block';
           list.innerHTML = data.map(k => `
-            <li><strong>${k.numero_identificador} (${k.nome_chave})</strong> com ${k.pessoa_nome} (Tel: ${k.pessoa_telefone || 'N/A'})</li>
+            <li><strong>${k.numero_identificador} (${k.nome_chave})</strong> com ${k.pessoa_nome} (Tel: ${k.pessoa_setor || 'N/A'})</li>
           `).join('');
         }
       } catch (err) {
@@ -524,10 +524,10 @@
           return;
         }
 
-        let csv = "Código Chave;Nome da Chave;Retirado por;Telefone;Dia Empréstimo;Horário;Devolução;Operador\n";
+        let csv = "Código Chave;Nome da Chave;Retirado por;setor;Dia Empréstimo;Horário;Devolução;Operador\n";
         
         result.dados.forEach(row => {
-          csv += `"${row.numero_identificador}";"${row.nome_chave}";"${row.pessoa_nome}";"${row.pessoa_telefone || ''}";"${row.dia_emprestimo}";"${row.hora_emprestimo}";"${row.data_devolucao || 'Pendente'}";"${row.operador_nome || 'N/I'}"\n`;
+          csv += `"${row.numero_identificador}";"${row.nome_chave}";"${row.pessoa_nome}";"${row.pessoa_setor || ''}";"${row.dia_emprestimo}";"${row.hora_emprestimo}";"${row.data_devolucao || 'Pendente'}";"${row.operador_nome || 'N/I'}"\n`;
         });
 
         const blob = new Blob(["\ufeff" + csv], { type: 'text/csv;charset=utf-8;' });
