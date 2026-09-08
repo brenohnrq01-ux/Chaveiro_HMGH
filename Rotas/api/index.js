@@ -81,7 +81,7 @@ app.get(['/api/emprestimos/atrasados', '/emprestimos/atrasados'], async (req, re
         c.numero_identificador,
         c.nome_chave AS nome_chave,
         p.nome AS pessoa_nome,
-        p.telefone AS pessoa_telefone
+        p.setor AS pessoa_setor
       FROM emprestimos e
       JOIN chaves c ON c.id = e.chave_id
       JOIN pessoas_autorizadas p ON p.id = e.pessoa_autorizada_id
