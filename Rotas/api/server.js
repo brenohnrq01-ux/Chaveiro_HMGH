@@ -229,6 +229,47 @@ app.get('/api/emprestimos/atrasados', autenticarToken, async (req, res) => {
 // ==========================================
 const rootDir = process.cwd();
 
+// Rota para Relatório Mensal de Empréstimos
+app.get(['/api/relatorios/mensal', '/relatorios/mensal'], autenticarToken, async (req, res) => {
+  try {
+    const { mes, ano } = req.query;
+    const agora = new Date();
+    const anoFiltro = ano || agora.getFullYear();
+    const mesFiltro = mes ? String(mes).padStart(2, '0') : String(agora.getMonth() + 1).padStart(2, '0');
+
+    const query = `
+      SELECT 
+        e.id AS emprestimo_id,
+        c.numero_identificador,
+        c.nome_chave,
+        p.nome AS pessoa_nome,
+        p.setor AS pessoa_setor,
+        TO_CHAR(e.data_emprestimo, 'DD/MM/YYYY') AS dia_emprestimo,
+        TO_CHAR(e.data_emprestimo, 'HH24:MI') AS hora_emprestimo,
+        TO_CHAR(e.data_devolucao, 'DD/MM/YYYY HH24:MI') AS data_devolucao,
+        u.nome AS operador_nome
+      FROM emprestimos e
+      JOIN chaves c ON c.id = e.chave_id
+      JOIN pessoas_autorizadas p ON p.id = e.pessoa_autorizada_id
+      LEFT JOIN usuarios u ON u.id = e.usuario_operador_id
+      WHERE EXTRACT(YEAR FROM e.data_emprestimo) = $1 
+        AND EXTRACT(MONTH FROM e.data_emprestimo) = $2
+      ORDER BY e.data_emprestimo DESC
+    `;
+
+    const result = await pool.query(query, [Number(anoFiltro), Number(mesFiltro)]);
+    return res.json({
+      mes: mesFiltro,
+      ano: anoFiltro,
+      total_registros: result.rowCount,
+      dados: result.rows
+    });
+  } catch (err) {
+    console.error("Erro ao gerar relatório mensal:", err);
+    return res.status(500).json({ erro: 'Erro ao gerar relatório mensal: ' + err.message });
+  }
+});
+
 // Serve os arquivos estáticos da pasta raiz
 app.use(express.static(rootDir));
 
