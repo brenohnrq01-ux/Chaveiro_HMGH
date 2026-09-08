@@ -226,19 +226,16 @@ app.get('/api/emprestimos/atrasados', autenticarToken, async (req, res) => {
 });
 
 // ==========================================
-// CONFIGURAÇÃO DO FRONTEND (RENDER)
+// ROTA DE RELATÓRIO MENSAL
 // ==========================================
-const rootDir = process.cwd();
-
-// Rota para Relatório Mensal de Empréstimos
-app.get(['/api/relatorios/mensal', '/relatorios/mensal'], autenticarToken, async (req, res) => {
+app.get('/api/relatorios/mensal', autenticarToken, async (req, res) => {
   try {
     const { mes, ano } = req.query;
     const agora = new Date();
     const anoFiltro = ano || agora.getFullYear();
     const mesFiltro = mes ? String(mes).padStart(2, '0') : String(agora.getMonth() + 1).padStart(2, '0');
 
-    const query = `
+    const queryText = `
       SELECT 
         e.id AS emprestimo_id,
         c.numero_identificador,
@@ -258,18 +255,23 @@ app.get(['/api/relatorios/mensal', '/relatorios/mensal'], autenticarToken, async
       ORDER BY e.data_emprestimo DESC
     `;
 
-    const result = await pool.query(query, [Number(anoFiltro), Number(mesFiltro)]);
+    const result = await pool.query(queryText, [Number(anoFiltro), Number(mesFiltro)]);
     return res.json({
       mes: mesFiltro,
       ano: anoFiltro,
       total_registros: result.rowCount,
       dados: result.rows
     });
-  } catch (err) {
-    console.error("Erro ao gerar relatório mensal:", err);
-    return res.status(500).json({ erro: 'Erro ao gerar relatório mensal: ' + err.message });
+  } catch (error) {
+    console.error('Erro ao gerar relatório mensal:', error);
+    return res.status(500).json({ erro: 'Erro ao gerar relatório mensal.' });
   }
 });
+
+// ==========================================
+// CONFIGURAÇÃO DO FRONTEND (RENDER)
+// ==========================================
+const rootDir = process.cwd();
 
 // Serve os arquivos estáticos da pasta raiz
 app.use(express.static(rootDir));
