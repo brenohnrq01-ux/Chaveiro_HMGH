@@ -152,7 +152,7 @@ app.get('/api/emprestimos/atrasados', async (req, res) => {
         c.numero_identificador,
         c.nome_chave AS nome_chave,
         p.nome AS pessoa_nome,
-        p.telefone AS pessoa_telefone
+        p.setor AS pessoa_setor
       FROM emprestimos e
       JOIN chaves c ON c.id = e.chave_id
       JOIN pessoas_autorizadas p ON p.id = e.pessoa_autorizada_id
@@ -174,7 +174,7 @@ app.get('/api/emprestimos/atrasados', async (req, res) => {
         c.numero_identificador,
         c.nome AS nome_chave,
         p.nome AS pessoa_nome,
-        p.telefone AS pessoa_telefone
+        p.setor AS pessoa_setor
       FROM emprestimos e
       JOIN chaves c ON c.id = e.chave_id
       JOIN pessoas_autorizadas p ON p.id = e.pessoa_autorizada_id
@@ -251,7 +251,7 @@ app.get(['/api/relatorios/mensal', '/relatorios/mensal'], async (req, res) => {
         c.numero_identificador,
         c.nome_chave,
         p.nome AS pessoa_nome,
-        p.telefone AS pessoa_telefone,
+        p.setor AS pessoa_setor,
         TO_CHAR(e.data_emprestimo, 'DD/MM/YYYY') AS dia_emprestimo,
         TO_CHAR(e.data_emprestimo, 'HH24:MI') AS hora_emprestimo,
         TO_CHAR(e.data_devolucao, 'DD/MM/YYYY HH24:MI') AS data_devolucao,
