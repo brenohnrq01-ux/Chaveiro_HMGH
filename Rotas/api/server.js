@@ -127,7 +127,7 @@ app.post('/api/emprestimos', autenticarToken, async (req, res) => {
       return res.status(400).json({ erro: 'Esta chave já está emprestada.' });
     }
 
-    // ADICIONADO data_emprestimo = NOW() para garantir que a data seja gravada corretamente
+    // Grava a data e hora atual do momento do empréstimo de forma explícita
     const novoEmprestimo = await client.query(
       `INSERT INTO emprestimos 
         (chave_id, pessoa_autorizada_id, usuario_operador_id, data_previsao_devolucao, data_emprestimo, status) 
@@ -175,7 +175,7 @@ app.post('/api/emprestimos/:id/devolucao', autenticarToken, async (req, res) => 
 
     const devolucaoResult = await client.query(
       `UPDATE emprestimos 
-       SET data_devolucao = CURRENT_TIMESTAMP, status = 'devolvido' 
+       SET data_devolucao = NOW(), status = 'devolvido' 
        WHERE id = $1 
        RETURNING *`,
       [id]
@@ -215,7 +215,7 @@ app.get('/api/emprestimos/atrasados', autenticarToken, async (req, res) => {
       JOIN chaves c ON e.chave_id = c.id
       JOIN pessoas_autorizadas p ON e.pessoa_autorizada_id = p.id
       WHERE e.data_devolucao IS NULL 
-        AND e.data_previsao_devolucao < CURRENT_TIMESTAMP;
+        AND e.data_previsao_devolucao < NOW();
     `;
     const result = await pool.query(queryText);
     return res.json(result.rows);
@@ -226,7 +226,7 @@ app.get('/api/emprestimos/atrasados', autenticarToken, async (req, res) => {
 });
 
 // ==========================================
-// ROTA DE RELATÓRIO MENSAL
+// 6. ROTA DE RELATÓRIO MENSAL
 // ==========================================
 app.get('/api/relatorios/mensal', autenticarToken, async (req, res) => {
   try {
@@ -285,4 +285,5 @@ app.use((req, res) => {
 if (process.env.NODE_ENV !== 'production') {
   app.listen(3000, () => console.log('Servidor rodando localmente na porta 3000'));
 }
+
 module.exports = app;
