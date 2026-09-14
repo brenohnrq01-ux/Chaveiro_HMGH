@@ -420,7 +420,7 @@
       };
     }
 
-    // 2. CARREGAR DASHBOARD
+        // 2. CARREGAR DASHBOARD
     async function loadDashboard() {
       try {
         const res = await fetch(`${API_URL}/dashboard`, { headers: getAuthHeaders() });
@@ -447,36 +447,48 @@
         document.getElementById('totalAvailable').innerText = totalAvailable;
         document.getElementById('totalBorrowed').innerText = totalBorrowed;
 
+        // Ordena os nomes dos setores em ordem crescente
+        const sortedSectorNames = Object.keys(sectorsMap).sort((a, b) => 
+          a.localeCompare(b, undefined, { numeric: true, sensitivity: 'base' })
+        );
+
         const container = document.getElementById('sectorsContainer');
-        container.innerHTML = Object.keys(sectorsMap).map(sectorName => `
-          <div class="sector-card">
-            <div class="sector-title">
-              <span><i class="fa-regular fa-folder-closed"></i> ${sectorName}</span>
-              <small style="font-size: 0.75rem; color: var(--text-muted);">${sectorsMap[sectorName].length} chave(s)</small>
-            </div>
-            <ul class="key-list">
-              ${sectorsMap[sectorName].map(key => `
-                <li class="key-item">
-                  <div class="key-info">
-                    <strong>${key.numero_identificador}</strong> - ${key.nome_chave}
-                    <div>
-                      <span class="badge ${key.chave_status === 'guardada' ? 'badge-guardada' : 'badge-emprestada'}">
-                        ${key.chave_status}
-                      </span>
+        container.innerHTML = sortedSectorNames.map(sectorName => {
+          // Ordena as chaves de cada setor pelo número identificador em ordem crescente (ex: CH-001, CH-002...)
+          const sortedKeys = sectorsMap[sectorName].sort((a, b) => 
+            (a.numero_identificador || '').localeCompare(b.numero_identificador || '', undefined, { numeric: true, sensitivity: 'base' })
+          );
+
+          return `
+            <div class="sector-card">
+              <div class="sector-title">
+                <span><i class="fa-regular fa-folder-closed"></i> ${sectorName}</span>
+                <small style="font-size: 0.75rem; color: var(--text-muted);">${sortedKeys.length} chave(s)</small>
+              </div>
+              <ul class="key-list">
+                ${sortedKeys.map(key => `
+                  <li class="key-item">
+                    <div class="key-info">
+                      <strong>${key.numero_identificador}</strong> - ${key.nome_chave}
+                      <div>
+                        <span class="badge ${key.chave_status === 'guardada' ? 'badge-guardada' : 'badge-emprestada'}">
+                          ${key.chave_status}
+                        </span>
+                      </div>
+                      ${key.pessoa_com_chave ? `<small><i class="fa-regular fa-user"></i> Com: ${key.pessoa_com_chave}</small>` : ''}
                     </div>
-                    ${key.pessoa_com_chave ? `<small><i class="fa-regular fa-user"></i> Com: ${key.pessoa_com_chave}</small>` : ''}
-                  </div>
-                  <div>
-                    ${key.chave_status === 'guardada' 
-                      ? `<button class="btn btn-primary" onclick="openLoanModal(${key.chave_id}, '${key.numero_identificador}')"><i class="fa-solid fa-arrow-right-from-bracket"></i> Retirar</button>`
-                      : `<button class="btn btn-secondary" onclick="returnKey(${key.emprestimo_id})"><i class="fa-solid fa-arrow-rotate-left"></i> Devolver</button>`
-                    }
-                  </div>
-                </li>
-              `).join('')}
-            </ul>
-          </div>
-        `).join('');
+                    <div>
+                      ${key.chave_status === 'guardada' 
+                        ? `<button class="btn btn-primary" onclick="openLoanModal(${key.chave_id}, '${key.numero_identificador}')"><i class="fa-solid fa-arrow-right-from-bracket"></i> Retirar</button>`
+                        : `<button class="btn btn-secondary" onclick="returnKey(${key.emprestimo_id})"><i class="fa-solid fa-arrow-rotate-left"></i> Devolver</button>`
+                      }
+                    </div>
+                  </li>
+                `).join('')}
+              </ul>
+            </div>
+          `;
+        }).join('');
 
       } catch (err) {
         if (err.message.includes('Token') || err.message.includes('negado')) {
@@ -486,6 +498,7 @@
         }
       }
     }
+
 
     // 3. REGISTRAR EMPRÉSTIMO
     function openLoanModal(keyId, keyNum) {
