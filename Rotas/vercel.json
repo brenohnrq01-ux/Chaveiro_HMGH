@@ -8,6 +8,18 @@
     {
       "src": "index.html",
       "use": "@vercel/static"
+    },
+    {
+      "src": "manifest.json",
+      "use": "@vercel/static"
+    },
+    {
+      "src": "sw.js",
+      "use": "@vercel/static"
+    },
+    {
+      "src": "icon-*.png",
+      "use": "@vercel/static"
     }
   ],
   "routes": [
@@ -16,20 +28,7 @@
       "dest": "/api/index.js"
     },
     {
-      "src": "/manifest.json",
-      "dest": "/manifest.json"
-    },
-    {
-      "src": "/sw.js",
-      "dest": "/sw.js"
-    },
-    {
-      "src": "/icon-192.png",
-      "dest": "/icon-192.png"
-    },
-    {
-      "src": "/icon-512.png",
-      "dest": "/icon-512.png"
+      "handle": "filesystem"
     },
     {
       "src": "/(.*)",
