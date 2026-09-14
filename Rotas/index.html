@@ -3,7 +3,17 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  
+  <!-- Configurações de PWA e Tema -->
+  <link rel="manifest" href="manifest.json">
+  <meta name="theme-color" content="#4f46e5">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="Chaves">
+
   <link rel="icon" type="image/png" href="https://icons.iconarchive.com/icons/microsoft/fluentui-emoji-flat/128/Key-Flat-icon.png">
+  <link rel="apple-touch-icon" href="https://icons.iconarchive.com/icons/microsoft/fluentui-emoji-flat/128/Key-Flat-icon.png">
+  
   <title>Controle de Chaves | Painel Admin</title>
   
   <!-- Fontes e Ícones externos -->
@@ -149,39 +159,19 @@
       max-height: 90vh; overflow-y: auto;
     }
 
-    /* Ajustes específicos para telas móveis */
     @media (max-width: 640px) {
       header {
         padding: 12px 16px;
         flex-direction: column;
         align-items: stretch;
       }
-      .brand {
-        justify-content: center;
-      }
-      .user-profile {
-        justify-content: center;
-        width: 100%;
-        gap: 8px;
-      }
-      .user-profile .btn, .user-profile span {
-        font-size: 0.85rem;
-      }
-      .stats-grid {
-        grid-template-columns: 1fr;
-      }
-      .grid-sectors {
-        grid-template-columns: 1fr;
-      }
-      .key-item {
-        flex-direction: column;
-        align-items: flex-start;
-      }
-      .key-item > div:last-child {
-        width: 100%;
-        display: flex;
-        justify-content: flex-end;
-      }
+      .brand { justify-content: center; }
+      .user-profile { justify-content: center; width: 100%; gap: 8px; }
+      .user-profile .btn, .user-profile span { font-size: 0.85rem; }
+      .stats-grid { grid-template-columns: 1fr; }
+      .grid-sectors { grid-template-columns: 1fr; }
+      .key-item { flex-direction: column; align-items: flex-start; }
+      .key-item > div:last-child { width: 100%; display: flex; justify-content: flex-end; }
     }
   </style>
 </head>
@@ -218,6 +208,10 @@
         <span>Controle de Chaves</span>
       </div>
       <div class="user-profile">
+        <!-- Botão customizado para instalar PWA (Ficará oculto até que o navegador permita a instalação) -->
+        <button id="installBtn" class="btn btn-primary" style="display: none;" onclick="installPWA()">
+          <i class="fa-solid fa-download"></i> Instalar App
+        </button>
         <button class="btn btn-secondary" onclick="openReportModal()"><i class="fa-solid fa-file-csv"></i> Relatório</button>
         <span><i class="fa-regular fa-user"></i> <strong id="operatorName">Operador</strong></span>
         <button class="btn btn-danger" onclick="logout()"><i class="fa-solid fa-right-from-bracket"></i> Sair</button>
@@ -322,6 +316,46 @@
   </div>
 
   <script>
+    // Configurações do PWA e Lógica de Instalação por Botão
+    let deferredPrompt;
+
+    window.addEventListener('beforeinstallprompt', (e) => {
+      e.preventDefault();
+      deferredPrompt = e;
+      const installBtn = document.getElementById('installBtn');
+      if (installBtn) {
+        installBtn.style.display = 'inline-flex';
+      }
+    });
+
+    function installPWA() {
+      const installBtn = document.getElementById('installBtn');
+      if (!deferredPrompt) return;
+      
+      deferredPrompt.prompt();
+      
+      deferredPrompt.userChoice.then((choiceResult) => {
+        if (choiceResult.outcome === 'accepted') {
+          console.log('Usuário aceitou a instalação do aplicativo.');
+        } else {
+          console.log('Usuário dispensou a instalação.');
+        }
+        deferredPrompt = null;
+        if (installBtn) {
+          installBtn.style.display = 'none';
+        }
+      });
+    }
+
+    // Registro do Service Worker
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', () => {
+        navigator.serviceWorker.register('./service-worker.js')
+          .then(reg => console.log('Service Worker registrado:', reg.scope))
+          .catch(err => console.log('Erro no Service Worker:', err));
+      });
+    }
+
     const API_URL = window.location.origin + '/api';
 
     document.addEventListener('DOMContentLoaded', () => {
