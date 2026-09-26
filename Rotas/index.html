@@ -6,7 +6,7 @@
   
   <!-- Configurações de PWA e Tema -->
   <link rel="manifest" href="manifest.json">
-  <meta name="theme-color" content="#4f46e5">
+  <meta name="theme-color" content="#facc15">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta name="apple-mobile-web-app-title" content="Chaves">
@@ -25,41 +25,48 @@
 
   <style>
     :root {
-      --primary: #4f46e5;
-      --primary-hover: #4338ca;
-      --bg-body: #f8fafc;
-      --surface: #ffffff;
-      --text-main: #0f172a;
-      --text-muted: #64748b;
-      --border: #e2e8f0;
-      --success-bg: #dcfce7;
-      --success-text: #15803d;
-      --warning-bg: #fef3c7;
-      --warning-text: #b45309;
-      --danger-bg: #fee2e2;
-      --danger-text: #b91c1c;
+      --bg-body: #09090b;          /* Preto profundo */
+      --surface: #18181b;          /* Card/Header Grafite */
+      --surface-hover: #27272a;    /* Destaque para elementos internos */
+      --border: #27272a;           /* Bordas sutis */
+      --border-highlight: #3f3f46;
+      --text-main: #f8fafc;        /* Texto principal (Branco) */
+      --text-muted: #a1a1aa;       /* Texto secundário */
+      
+      --primary: #facc15;          /* Amarelo Vibrante */
+      --primary-hover: #eab308;    /* Amarelo Hover */
+      --text-on-primary: #000000;  /* Texto sobre botão amarelo */
+
+      --danger-bg: #2a1215;
+      --danger-border: #7f1d1d;
+      --danger-text: #fca5a5;
+
+      --warning-bg: rgba(250, 204, 21, 0.12);
+      --warning-text: #facc15;
+
       --radius: 12px;
-      --shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -2px rgba(0, 0, 0, 0.1);
+      --shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.5), 0 8px 10px -6px rgba(0, 0, 0, 0.5);
     }
 
     * { box-sizing: border-box; font-family: 'Inter', sans-serif; margin: 0; padding: 0; }
     body { background-color: var(--bg-body); color: var(--text-main); min-height: 100vh; line-height: 1.5; overflow-x: hidden; }
 
-    /* Login Box (Modal Overlay)  */
+    /* Login Box (Modal Overlay) */
     .login-container {
       display: flex; position: fixed; top: 0; left: 0; width: 100vw; height: 100vh;
-      background: linear-gradient(135deg, #0f172a 0%, #1e1b4b 100%);
+      background: radial-gradient(circle at center, #18181b 0%, #000000 100%);
       align-items: center; justify-content: center; z-index: 100; padding: 16px;
     }
     .login-card {
-      background: rgba(255, 255, 255, 0.95); backdrop-filter: blur(10px);
-      padding: 30px 24px; border-radius: 16px; width: 100%; max-width: 420px;
-      box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25); text-align: center;
+      background: var(--surface); border: 1px solid var(--border);
+      padding: 36px 28px; border-radius: 16px; width: 100%; max-width: 420px;
+      box-shadow: var(--shadow); text-align: center;
     }
     .login-card .logo-icon {
-      background: var(--primary); color: white; width: 56px; height: 56px;
+      background: var(--primary); color: var(--text-on-primary); width: 60px; height: 60px;
       border-radius: 14px; display: inline-flex; align-items: center;
-      justify-content: center; font-size: 24px; margin-bottom: 20px;
+      justify-content: center; font-size: 26px; margin-bottom: 20px;
+      box-shadow: 0 0 20px rgba(250, 204, 21, 0.25);
     }
 
     /* Top Bar Header */
@@ -77,19 +84,21 @@
 
     /* Banner Alerta de Atrasos */
     .alert-banner {
-      background: var(--danger-bg); border: 1px solid #fca5a5; border-radius: var(--radius);
+      background: var(--danger-bg); border: 1px solid var(--danger-border); border-radius: var(--radius);
       padding: 16px; margin-bottom: 24px; display: none; color: var(--danger-text);
     }
-    .alert-banner h4 { display: flex; align-items: center; gap: 8px; font-weight: 600; font-size: 1rem; margin-bottom: 8px; }
+    .alert-banner h4 { display: flex; align-items: center; gap: 8px; font-weight: 600; font-size: 1rem; margin-bottom: 8px; color: #fecaca; }
     .alert-list { list-style: none; padding-left: 20px; }
     .alert-list li { margin-top: 4px; font-size: 0.9rem; word-break: break-word; }
 
     /* Estatísticas do Dashboard */
     .stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 16px; margin-bottom: 24px; }
     .stat-card {
-      background: var(--surface); padding: 16px; border-radius: var(--radius);
+      background: var(--surface); padding: 18px; border-radius: var(--radius);
       border: 1px solid var(--border); display: flex; align-items: center; gap: 16px;
+      transition: border-color 0.2s;
     }
+    .stat-card:hover { border-color: var(--border-highlight); }
     .stat-icon {
       width: 48px; height: 48px; border-radius: 10px; display: flex; align-items: center; justify-content: center; font-size: 1.25rem; flex-shrink: 0;
     }
@@ -98,66 +107,71 @@
     .grid-sectors { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 20px; }
     .sector-card {
       background: var(--surface); border-radius: var(--radius); border: 1px solid var(--border);
-      padding: 16px; box-shadow: var(--shadow); display: flex; flex-direction: column;
+      padding: 18px; box-shadow: var(--shadow); display: flex; flex-direction: column;
     }
     .sector-title {
       font-size: 1.1rem; font-weight: 600; color: var(--text-main); margin-bottom: 16px;
       padding-bottom: 12px; border-bottom: 1px solid var(--border); display: flex;
       justify-content: space-between; align-items: center;
     }
+    .sector-title i { color: var(--primary); }
 
     /* Lista de Chaves */
     .key-list { list-style: none; display: flex; flex-direction: column; gap: 12px; }
     .key-item {
       display: flex; justify-content: space-between; align-items: center; padding: 12px;
-      background: #f8fafc; border: 1px solid var(--border); border-radius: 8px; transition: all 0.2s; gap: 12px; flex-wrap: wrap;
+      background: var(--surface-hover); border: 1px solid var(--border); border-radius: 8px; transition: all 0.2s; gap: 12px; flex-wrap: wrap;
     }
-    .key-item:hover { border-color: #cbd5e1; background: #f1f5f9; }
+    .key-item:hover { border-color: var(--border-highlight); }
     .key-info { flex: 1; min-width: 150px; }
     .key-info strong { font-size: 0.95rem; color: var(--text-main); }
     .key-info small { color: var(--text-muted); font-size: 0.8rem; display: block; margin-top: 2px; word-break: break-word; }
 
     /* Badges de Status */
     .badge {
-      display: inline-block; padding: 2px 8px; border-radius: 6px; font-size: 0.75rem;
-      font-weight: 600; text-transform: uppercase; margin-top: 4px;
+      display: inline-block; padding: 3px 10px; border-radius: 6px; font-size: 0.725rem;
+      font-weight: 700; text-transform: uppercase; margin-top: 6px; letter-spacing: 0.5px;
     }
-    .badge-guardada { background: var(--success-bg); color: var(--success-text); }
-    .badge-emprestada { background: var(--warning-bg); color: var(--warning-text); }
+    .badge-guardada { background: rgba(250, 204, 21, 0.15); color: #facc15; border: 1px solid rgba(250, 204, 21, 0.3); }
+    .badge-emprestada { background: rgba(245, 158, 11, 0.15); color: #fbbf24; border: 1px solid rgba(245, 158, 11, 0.3); }
 
     /* Botões Genéricos */
     .btn {
-      padding: 8px 16px; border: none; border-radius: 8px; cursor: pointer;
-      font-size: 0.875rem; font-weight: 500; display: inline-flex; align-items: center;
-      gap: 8px; transition: background 0.2s, transform 0.1s; white-space: nowrap;
+      padding: 9px 16px; border: none; border-radius: 8px; cursor: pointer;
+      font-size: 0.875rem; font-weight: 600; display: inline-flex; align-items: center;
+      gap: 8px; transition: all 0.2s; white-space: nowrap;
     }
     .btn:active { transform: scale(0.98); }
-    .btn-primary { background: var(--primary); color: white; }
-    .btn-primary:hover { background: var(--primary-hover); }
-    .btn-secondary { background: #e2e8f0; color: var(--text-main); }
-    .btn-secondary:hover { background: #cbd5e1; }
-    .btn-danger { background: var(--danger-bg); color: var(--danger-text); }
-    .btn-danger:hover { background: #fca5a5; }
+    
+    .btn-primary { background: var(--primary); color: var(--text-on-primary); }
+    .btn-primary:hover { background: var(--primary-hover); box-shadow: 0 0 12px rgba(250, 204, 21, 0.3); }
+    
+    .btn-secondary { background: #27272a; color: var(--text-main); border: 1px solid var(--border-highlight); }
+    .btn-secondary:hover { background: #3f3f46; color: #ffffff; }
+    
+    .btn-danger { background: #3f1515; color: #fca5a5; border: 1px solid #7f1d1d; }
+    .btn-danger:hover { background: #7f1d1d; color: #ffffff; }
 
     /* Campos de Formulário */
     .form-group { margin-bottom: 16px; text-align: left; }
-    .form-group label { display: block; font-weight: 500; margin-bottom: 6px; font-size: 0.875rem; color: var(--text-main); }
+    .form-group label { display: block; font-weight: 500; margin-bottom: 6px; font-size: 0.875rem; color: var(--text-muted); }
     .form-group input, .form-group select {
       width: 100%; padding: 10px 14px; border: 1px solid var(--border);
-      border-radius: 8px; font-size: 0.95rem; transition: border-color 0.2s; background: #fff;
+      border-radius: 8px; font-size: 0.95rem; transition: border-color 0.2s;
+      background: var(--bg-body); color: var(--text-main);
     }
-    .form-group input:focus, .form-group select:focus { outline: none; border-color: var(--primary); }
+    .form-group input:focus, .form-group select:focus { outline: none; border-color: var(--primary); box-shadow: 0 0 0 2px rgba(250, 204, 21, 0.2); }
 
     /* Modal Genérica */
     .modal {
       display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-      background: rgba(15, 23, 42, 0.6); backdrop-filter: blur(4px);
+      background: rgba(0, 0, 0, 0.75); backdrop-filter: blur(6px);
       align-items: center; justify-content: center; z-index: 50; padding: 16px;
     }
     .modal-content {
-      background: var(--surface); padding: 24px; border-radius: 16px;
-      width: 440px; max-width: 100%; box-shadow: 0 20px 25px -5px rgba(0,0,0,0.1);
-      max-height: 90vh; overflow-y: auto;
+      background: var(--surface); border: 1px solid var(--border); padding: 24px; border-radius: 16px;
+      width: 440px; max-width: 100%; box-shadow: var(--shadow);
+      max-height: 90vh; overflow-y: auto; color: var(--text-main);
     }
 
     @media (max-width: 640px) {
@@ -182,7 +196,7 @@
   <div id="loginScreen" class="login-container">
     <div class="login-card">
       <div class="logo-icon"><i class="fa-solid fa-key"></i></div>
-      <h2 style="font-size: 1.5rem; margin-bottom: 8px;">Acesso ao Sistema</h2>
+      <h2 style="font-size: 1.5rem; margin-bottom: 8px; color: var(--text-main);">Acesso ao Sistema</h2>
       <p style="color: var(--text-muted); font-size: 0.875rem; margin-bottom: 24px;">Entre com suas credenciais de operador</p>
       
       <form id="loginForm">
@@ -194,7 +208,7 @@
           <label>Senha</label>
           <input type="password" id="loginSenha" required placeholder="••••••••">
         </div>
-        <button type="submit" class="btn btn-primary" style="width: 100%; justify-content: center; padding: 12px;">
+        <button type="submit" class="btn btn-primary" style="width: 100%; justify-content: center; padding: 12px; font-size: 1rem; margin-top: 8px;">
           Entrar no Painel
         </button>
       </form>
@@ -213,7 +227,7 @@
           <i class="fa-solid fa-download"></i> Instalar App
         </button>
         <button class="btn btn-secondary" onclick="openReportModal()"><i class="fa-solid fa-file-csv"></i> Relatório</button>
-        <span><i class="fa-regular fa-user"></i> <strong id="operatorName">Operador</strong></span>
+        <span style="color: var(--text-muted);"><i class="fa-regular fa-user" style="color: var(--primary);"></i> <strong id="operatorName" style="color: var(--text-main);">Operador</strong></span>
         <button class="btn btn-danger" onclick="logout()"><i class="fa-solid fa-right-from-bracket"></i> Sair</button>
       </div>
     </header>
@@ -221,31 +235,31 @@
     <main>
       <!-- Alerta de Chaves Atrasadas -->
       <div id="alertBanner" class="alert-banner">
-        <h4><i class="fa-solid fa-triangle-exclamation"></i> Chaves em Atraso Identificadas</h4>
+        <h4><i class="fa-solid fa-triangle-exclamation" style="color: var(--primary);"></i> Chaves em Atraso Identificadas</h4>
         <ul id="alertList" class="alert-list"></ul>
       </div>
 
       <!-- Resumo do Dashboard -->
       <div class="stats-grid">
         <div class="stat-card">
-          <div class="stat-icon" style="background: #e0e7ff; color: #4338ca;"><i class="fa-solid fa-vault"></i></div>
+          <div class="stat-icon" style="background: rgba(250, 204, 21, 0.1); color: var(--primary);"><i class="fa-solid fa-vault"></i></div>
           <div>
             <span style="font-size: 0.8rem; color: var(--text-muted);">Total de Setores</span>
-            <h3 id="totalSectors">0</h3>
+            <h3 id="totalSectors" style="font-size: 1.5rem; color: var(--text-main);">0</h3>
           </div>
         </div>
         <div class="stat-card">
-          <div class="stat-icon" style="background: var(--success-bg); color: var(--success-text);"><i class="fa-solid fa-check"></i></div>
+          <div class="stat-icon" style="background: rgba(34, 197, 94, 0.1); color: #22c55e;"><i class="fa-solid fa-check"></i></div>
           <div>
             <span style="font-size: 0.8rem; color: var(--text-muted);">Chaves Disponíveis</span>
-            <h3 id="totalAvailable">0</h3>
+            <h3 id="totalAvailable" style="font-size: 1.5rem; color: var(--text-main);">0</h3>
           </div>
         </div>
         <div class="stat-card">
-          <div class="stat-icon" style="background: var(--warning-bg); color: var(--warning-text);"><i class="fa-solid fa-hand-holding"></i></div>
+          <div class="stat-icon" style="background: rgba(250, 204, 21, 0.1); color: var(--primary);"><i class="fa-solid fa-hand-holding"></i></div>
           <div>
             <span style="font-size: 0.8rem; color: var(--text-muted);">Chaves Emprestadas</span>
-            <h3 id="totalBorrowed">0</h3>
+            <h3 id="totalBorrowed" style="font-size: 1.5rem; color: var(--text-main);">0</h3>
           </div>
         </div>
       </div>
@@ -258,12 +272,12 @@
   <!-- Modal para Registrar Empréstimo -->
   <div id="loanModal" class="modal">
     <div class="modal-content">
-      <h3 style="margin-bottom: 20px;"><i class="fa-solid fa-hand-holding-hand"></i> Registrar Empréstimo</h3>
+      <h3 style="margin-bottom: 20px; color: var(--text-main);"><i class="fa-solid fa-hand-holding-hand" style="color: var(--primary);"></i> Registrar Empréstimo</h3>
       <form id="loanForm">
         <input type="hidden" id="loanKeyId">
         <div class="form-group">
           <label>Chave Selecionada</label>
-          <input type="text" id="loanKeyNum" readonly style="background: #f1f5f9; color: #64748b; font-weight: 600;">
+          <input type="text" id="loanKeyNum" readonly style="background: var(--surface-hover); color: var(--primary); font-weight: 700;">
         </div>
         <div class="form-group">
           <label>ID da Pessoa Autorizada</label>
@@ -284,7 +298,7 @@
   <!-- Modal para Relatório Mensal -->
   <div id="reportModal" class="modal">
     <div class="modal-content">
-      <h3 style="margin-bottom: 20px;"><i class="fa-solid fa-file-lines"></i> Relatório Mensal</h3>
+      <h3 style="margin-bottom: 20px; color: var(--text-main);"><i class="fa-solid fa-file-lines" style="color: var(--primary);"></i> Relatório Mensal</h3>
       <form id="reportForm">
         <div class="form-group">
           <label>Mês de Referência</label>
@@ -419,7 +433,7 @@
       };
     }
 
-    // 2. CARREGAR DASHBOARD (com deduplicação de segurança de chaves)
+    // 2. CARREGAR DASHBOARD
     async function loadDashboard() {
       try {
         const res = await fetch(`${API_URL}/dashboard`, { headers: getAuthHeaders() });
@@ -430,7 +444,6 @@
         let totalAvailable = 0;
         let totalBorrowed = 0;
 
-        // Filtro de segurança: Garante 1 único registro por chave_id
         const uniqueKeysMap = new Map();
         data.forEach(item => {
           if (item.chave_id && !uniqueKeysMap.has(item.chave_id)) {
@@ -452,14 +465,12 @@
         document.getElementById('totalAvailable').innerText = totalAvailable;
         document.getElementById('totalBorrowed').innerText = totalBorrowed;
 
-        // Ordena os nomes dos setores em ordem crescente
         const sortedSectorNames = Object.keys(sectorsMap).sort((a, b) => 
           a.localeCompare(b, undefined, { numeric: true, sensitivity: 'base' })
         );
 
         const container = document.getElementById('sectorsContainer');
         container.innerHTML = sortedSectorNames.map(sectorName => {
-          // Ordena as chaves de cada setor pelo número identificador em ordem crescente (ex: CH-001, CH-002...)
           const sortedKeys = sectorsMap[sectorName].sort((a, b) => 
             (a.numero_identificador || '').localeCompare(b.numero_identificador || '', undefined, { numeric: true, sensitivity: 'base' })
           );
@@ -480,7 +491,7 @@
                           ${key.chave_status}
                         </span>
                       </div>
-                      ${key.pessoa_com_chave ? `<small><i class="fa-regular fa-user"></i> Com: ${key.pessoa_com_chave}</small>` : ''}
+                      ${key.pessoa_com_chave ? `<small><i class="fa-regular fa-user" style="color: var(--primary);"></i> Com: ${key.pessoa_com_chave}</small>` : ''}
                     </div>
                     <div>
                       ${key.chave_status === 'guardada' 
@@ -565,7 +576,7 @@
       }
     }
 
-    // 5. VERIFICAR ATRASOS (com deduplicação no banner)
+    // 5. VERIFICAR ATRASOS
     async function checkOverdueKeys() {
       try {
         const res = await fetch(`${API_URL}/emprestimos/atrasados`, { headers: getAuthHeaders() });
@@ -575,7 +586,6 @@
         const list = document.getElementById('alertList');
 
         if (res.ok && data.length > 0) {
-          // Filtra para manter apenas 1 entrada por identificador de chave
           const atraseUnique = Array.from(
             new Map(data.map(item => [item.numero_identificador, item])).values()
           );
@@ -592,7 +602,7 @@
       }
     }
 
-    // 6. RELATÓRIO MENSAL (MODAL E DOWNLOAD DE CSV)
+    // 6. RELATÓRIO MENSAL
     function openReportModal() {
       const agora = new Date();
       const mesAtual = String(agora.getMonth() + 1).padStart(2, '0');
