@@ -125,7 +125,7 @@
     .badge-guardada { background: var(--success-bg); color: var(--success-text); }
     .badge-emprestada { background: var(--warning-bg); color: var(--warning-text); }
 
-    /* Botões Genericos */
+    /* Botões Genéricos */
     .btn {
       padding: 8px 16px; border: none; border-radius: 8px; cursor: pointer;
       font-size: 0.875rem; font-weight: 500; display: inline-flex; align-items: center;
@@ -148,7 +148,7 @@
     }
     .form-group input:focus, .form-group select:focus { outline: none; border-color: var(--primary); }
 
-    /* Modal Generica */
+    /* Modal Genérica */
     .modal {
       display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%;
       background: rgba(15, 23, 42, 0.6); backdrop-filter: blur(4px);
@@ -209,7 +209,6 @@
         <span>Controle de Chaves</span>
       </div>
       <div class="user-profile">
-        <!-- Botão customizado para instalar PWA (Ficará oculto até que o navegador permita a instalação) -->
         <button id="installBtn" class="btn btn-primary" style="display: none;" onclick="installPWA()">
           <i class="fa-solid fa-download"></i> Instalar App
         </button>
@@ -420,7 +419,7 @@
       };
     }
 
-        // 2. CARREGAR DASHBOARD
+    // 2. CARREGAR DASHBOARD (com deduplicação de segurança de chaves)
     async function loadDashboard() {
       try {
         const res = await fetch(`${API_URL}/dashboard`, { headers: getAuthHeaders() });
@@ -431,16 +430,22 @@
         let totalAvailable = 0;
         let totalBorrowed = 0;
 
-        const sectorsMap = {};
+        // Filtro de segurança: Garante 1 único registro por chave_id
+        const uniqueKeysMap = new Map();
         data.forEach(item => {
+          if (item.chave_id && !uniqueKeysMap.has(item.chave_id)) {
+            uniqueKeysMap.set(item.chave_id, item);
+          }
+        });
+
+        const sectorsMap = {};
+        Array.from(uniqueKeysMap.values()).forEach(item => {
           if (!sectorsMap[item.setor_nome]) {
             sectorsMap[item.setor_nome] = [];
           }
-          if (item.chave_id) {
-            sectorsMap[item.setor_nome].push(item);
-            if (item.chave_status === 'guardada') totalAvailable++;
-            if (item.chave_status === 'emprestada') totalBorrowed++;
-          }
+          sectorsMap[item.setor_nome].push(item);
+          if (item.chave_status === 'guardada') totalAvailable++;
+          if (item.chave_status === 'emprestada') totalBorrowed++;
         });
 
         document.getElementById('totalSectors').innerText = Object.keys(sectorsMap).length;
@@ -469,7 +474,7 @@
                 ${sortedKeys.map(key => `
                   <li class="key-item">
                     <div class="key-info">
-                      <strong>${key.numero_identificador}</strong> - ${key.nome_chave}
+                      <strong>${key.numero_identificador}</strong> -${key.nome_chave}
                       <div>
                         <span class="badge ${key.chave_status === 'guardada' ? 'badge-guardada' : 'badge-emprestada'}">
                           ${key.chave_status}
@@ -498,7 +503,6 @@
         }
       }
     }
-
 
     // 3. REGISTRAR EMPRÉSTIMO
     function openLoanModal(keyId, keyNum) {
@@ -534,6 +538,7 @@
         alert('Empréstimo registrado com sucesso!');
         closeModal();
         loadDashboard();
+        checkOverdueKeys();
       } catch (err) {
         alert(`Erro: ${err.message}`);
       }
@@ -554,24 +559,33 @@
 
         alert('Chave devolvida com sucesso!');
         loadDashboard();
+        checkOverdueKeys();
       } catch (err) {
         alert(`Erro: ${err.message}`);
       }
     }
 
-    // 5. VERIFICAR ATRASOS
+    // 5. VERIFICAR ATRASOS (com deduplicação no banner)
     async function checkOverdueKeys() {
       try {
         const res = await fetch(`${API_URL}/emprestimos/atrasados`, { headers: getAuthHeaders() });
         const data = await res.json();
 
+        const banner = document.getElementById('alertBanner');
+        const list = document.getElementById('alertList');
+
         if (res.ok && data.length > 0) {
-          const banner = document.getElementById('alertBanner');
-          const list = document.getElementById('alertList');
+          // Filtra para manter apenas 1 entrada por identificador de chave
+          const atraseUnique = Array.from(
+            new Map(data.map(item => [item.numero_identificador, item])).values()
+          );
+
           banner.style.display = 'block';
-          list.innerHTML = data.map(k => `
+          list.innerHTML = atraseUnique.map(k => `
             <li><strong>${k.numero_identificador} (${k.nome_chave})</strong> com ${k.pessoa_nome} (Setor: ${k.pessoa_setor || 'N/A'})</li>
           `).join('');
+        } else {
+          banner.style.display = 'none';
         }
       } catch (err) {
         console.error('Erro ao verificar atrasos:', err);
