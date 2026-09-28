@@ -25,17 +25,17 @@
 
   <style>
     :root {
-      --bg-body: #09090b;          /* Preto profundo */
-      --surface: #18181b;          /* Card/Header Grafite */
-      --surface-hover: #27272a;    /* Destaque para elementos internos */
-      --border: #27272a;           /* Bordas sutis */
+      --bg-body: #09090b;
+      --surface: #18181b;
+      --surface-hover: #27272a;
+      --border: #27272a;
       --border-highlight: #3f3f46;
-      --text-main: #f8fafc;        /* Texto principal (Branco) */
-      --text-muted: #a1a1aa;       /* Texto secundário */
+      --text-main: #f8fafc;
+      --text-muted: #a1a1aa;
       
-      --primary: #facc15;          /* Amarelo Vibrante */
-      --primary-hover: #eab308;    /* Amarelo Hover */
-      --text-on-primary: #000000;  /* Texto sobre botão amarelo */
+      --primary: #facc15;
+      --primary-hover: #eab308;
+      --text-on-primary: #000000;
 
       --danger-bg: #2a1215;
       --danger-border: #7f1d1d;
@@ -51,7 +51,7 @@
     * { box-sizing: border-box; font-family: 'Inter', sans-serif; margin: 0; padding: 0; }
     body { background-color: var(--bg-body); color: var(--text-main); min-height: 100vh; line-height: 1.5; overflow-x: hidden; }
 
-    /* Login Box (Modal Overlay) */
+    /* Login Box */
     .login-container {
       display: flex; position: fixed; top: 0; left: 0; width: 100vw; height: 100vh;
       background: radial-gradient(circle at center, #18181b 0%, #000000 100%);
@@ -132,8 +132,8 @@
       display: inline-block; padding: 3px 10px; border-radius: 6px; font-size: 0.725rem;
       font-weight: 700; text-transform: uppercase; margin-top: 6px; letter-spacing: 0.5px;
     }
-    .badge-guardada { background: rgba(250, 204, 21, 0.15); color: #facc15; border: 1px solid rgba(250, 204, 21, 0.3); }
-    .badge-emprestada { background: rgba(245, 158, 11, 0.15); color: #fbbf24; border: 1px solid rgba(245, 158, 11, 0.3); }
+    .badge-guardada { background: rgba(34, 197, 94, 0.15); color: #4ade80; border: 1px solid rgba(34, 197, 94, 0.3); }
+    .badge-emprestada { background: rgba(250, 204, 21, 0.15); color: #facc15; border: 1px solid rgba(250, 204, 21, 0.3); }
 
     /* Botões Genéricos */
     .btn {
@@ -330,43 +330,28 @@
   </div>
 
   <script>
-    // Configurações do PWA e Lógica de Instalação por Botão
     let deferredPrompt;
 
     window.addEventListener('beforeinstallprompt', (e) => {
       e.preventDefault();
       deferredPrompt = e;
       const installBtn = document.getElementById('installBtn');
-      if (installBtn) {
-        installBtn.style.display = 'inline-flex';
-      }
+      if (installBtn) installBtn.style.display = 'inline-flex';
     });
 
     function installPWA() {
       const installBtn = document.getElementById('installBtn');
       if (!deferredPrompt) return;
-      
       deferredPrompt.prompt();
-      
       deferredPrompt.userChoice.then((choiceResult) => {
-        if (choiceResult.outcome === 'accepted') {
-          console.log('Usuário aceitou a instalação do aplicativo.');
-        } else {
-          console.log('Usuário dispensou a instalação.');
-        }
         deferredPrompt = null;
-        if (installBtn) {
-          installBtn.style.display = 'none';
-        }
+        if (installBtn) installBtn.style.display = 'none';
       });
     }
 
-    // Registro do Service Worker
     if ('serviceWorker' in navigator) {
       window.addEventListener('load', () => {
-        navigator.serviceWorker.register('./sw.js')
-          .then(reg => console.log('Service Worker registrado:', reg.scope))
-          .catch(err => console.log('Erro no Service Worker:', err));
+        navigator.serviceWorker.register('./sw.js').catch(err => console.log('Erro no Service Worker:', err));
       });
     }
 
@@ -374,12 +359,9 @@
 
     document.addEventListener('DOMContentLoaded', () => {
       const token = localStorage.getItem('jwt_token');
-      if (token) {
-        showDashboard();
-      }
+      if (token) showDashboard();
     });
 
-    // 1. AÇÃO DE LOGIN
     document.getElementById('loginForm').addEventListener('submit', async (e) => {
       e.preventDefault();
       const email = document.getElementById('loginEmail').value;
@@ -394,10 +376,8 @@
 
         const text = await res.text();
         let data;
-        try {
-          data = JSON.parse(text);
-        } catch (jsonErr) {
-          throw new Error(`Servidor retornou resposta inválida (${res.status}): ${text.substring(0, 100)}...`);
+        try { data = JSON.parse(text); } catch (jsonErr) {
+          throw new Error(`Servidor retornou resposta inválida (${res.status})`);
         }
 
         if (!res.ok) throw new Error(data.erro || 'Falha na autenticação');
@@ -433,7 +413,7 @@
       };
     }
 
-    // 2. CARREGAR DASHBOARD
+    // CARREGAR DASHBOARD (com cálculo do estado real da chave)
     async function loadDashboard() {
       try {
         const res = await fetch(`${API_URL}/dashboard`, { headers: getAuthHeaders() });
@@ -447,6 +427,9 @@
         const uniqueKeysMap = new Map();
         data.forEach(item => {
           if (item.chave_id && !uniqueKeysMap.has(item.chave_id)) {
+            // Se houver pessoa_com_chave ou emprestimo_id ativo, força o estado para 'emprestada'
+            const isBorrowed = item.chave_status === 'emprestada' || Boolean(item.pessoa_com_chave) || Boolean(item.emprestimo_id);
+            item.chave_status_real = isBorrowed ? 'emprestada' : 'guardada';
             uniqueKeysMap.set(item.chave_id, item);
           }
         });
@@ -457,8 +440,9 @@
             sectorsMap[item.setor_nome] = [];
           }
           sectorsMap[item.setor_nome].push(item);
-          if (item.chave_status === 'guardada') totalAvailable++;
-          if (item.chave_status === 'emprestada') totalBorrowed++;
+
+          if (item.chave_status_real === 'guardada') totalAvailable++;
+          if (item.chave_status_real === 'emprestada') totalBorrowed++;
         });
 
         document.getElementById('totalSectors').innerText = Object.keys(sectorsMap).length;
@@ -487,14 +471,14 @@
                     <div class="key-info">
                       <strong>${key.numero_identificador}</strong> -${key.nome_chave}
                       <div>
-                        <span class="badge ${key.chave_status === 'guardada' ? 'badge-guardada' : 'badge-emprestada'}">
-                          ${key.chave_status}
+                        <span class="badge ${key.chave_status_real === 'guardada' ? 'badge-guardada' : 'badge-emprestada'}">
+                          ${key.chave_status_real}
                         </span>
                       </div>
                       ${key.pessoa_com_chave ? `<small><i class="fa-regular fa-user" style="color: var(--primary);"></i> Com: ${key.pessoa_com_chave}</small>` : ''}
                     </div>
                     <div>
-                      ${key.chave_status === 'guardada' 
+                      ${key.chave_status_real === 'guardada' 
                         ? `<button class="btn btn-primary" onclick="openLoanModal(${key.chave_id}, '${key.numero_identificador}')"><i class="fa-solid fa-arrow-right-from-bracket"></i> Retirar</button>`
                         : `<button class="btn btn-secondary" onclick="returnKey(${key.emprestimo_id})"><i class="fa-solid fa-arrow-rotate-left"></i> Devolver</button>`
                       }
@@ -515,7 +499,6 @@
       }
     }
 
-    // 3. REGISTRAR EMPRÉSTIMO
     function openLoanModal(keyId, keyNum) {
       document.getElementById('loanKeyId').value = keyId;
       document.getElementById('loanKeyNum').value = keyNum;
@@ -555,7 +538,6 @@
       }
     });
 
-    // 4. REGISTRAR DEVOLUÇÃO
     async function returnKey(emprestimoId) {
       if (!confirm('Confirmar a devolução desta chave?')) return;
 
@@ -576,7 +558,6 @@
       }
     }
 
-    // 5. VERIFICAR ATRASOS
     async function checkOverdueKeys() {
       try {
         const res = await fetch(`${API_URL}/emprestimos/atrasados`, { headers: getAuthHeaders() });
@@ -602,7 +583,6 @@
       }
     }
 
-    // 6. RELATÓRIO MENSAL
     function openReportModal() {
       const agora = new Date();
       const mesAtual = String(agora.getMonth() + 1).padStart(2, '0');
