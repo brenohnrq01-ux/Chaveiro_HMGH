@@ -1,9 +1,11 @@
 const express = require('express');
 const { Pool } = require('pg');
+const cors = require('cors');
 
 const app = express();
 
 // Middlewares essenciais
+app.use(cors());
 app.use(express.json());
 
 // Configuração do Banco de Dados com Supabase (Pooler + SSL)
@@ -12,44 +14,66 @@ const pool = new Pool({
   ssl: process.env.DATABASE_URL ? { rejectUnauthorized: false } : false
 });
 
-// Rota de Login aceita tanto /api/login quanto /login
+// Middleware simples para verificação de token nas rotas protegidas
+const autenticarToken = (req, res, next) => {
+  const authHeader = req.headers['authorization'];
+  const token = authHeader && authHeader.split(' ')[1];
+
+  if (!token) {
+    return res.status(401).json({ erro: 'Acesso negado. Token não fornecido.' });
+  }
+
+  // Em produção real, utilize a biblioteca 'jsonwebtoken' (jwt.verify)
+  if (!token.startsWith('token_jwt_simulado_')) {
+    return res.status(403).json({ erro: 'Token inválido ou expirado.' });
+  }
+
+  next();
+};
+
+// Rota de Login (Pública)
 app.post(['/api/login', '/login'], async (req, res) => {
   try {
     const { email, senha } = req.body;
-    
+
+    if (!email || !senha) {
+      return res.status(400).json({ erro: 'E-mail e senha são obrigatórios.' });
+    }
+
     const result = await pool.query('SELECT * FROM usuarios WHERE email = $1', [email]);
-    
+
     if (result.rows.length === 0) {
       return res.status(401).json({ erro: 'Usuário não encontrado' });
     }
 
     const usuario = result.rows[0];
-    
+
+    // Validação da senha
     if (usuario.senha_hash !== senha && usuario.senha !== senha) {
       return res.status(401).json({ erro: 'Senha incorreta' });
     }
 
-    return res.json({ 
+    return res.json({
       sucesso: true,
       token: 'token_jwt_simulado_' + Date.now(),
-      usuario: { 
-        id: usuario.id, 
-        nome: usuario.nome, 
-        email: usuario.email 
-      } 
+      usuario: {
+        id: usuario.id,
+        nome: usuario.nome,
+        email: usuario.email
+      }
     });
 
   } catch (err) {
     console.error("Erro interno no login:", err);
-    return res.status(500).json({ 
-      erro: 'Erro interno no servidor', 
-      detalhes: err.message 
+    return res.status(500).json({
+      erro: 'Erro interno no servidor',
+      detalhes: err.message
     });
   }
 });
 
-// Rota do Dashboard aceita /api/dashboard e /dashboard
-app.get(['/api/dashboard', '/dashboard'], async (req, res) => {
+// Rota do Dashboard (Protegida)
+app.get(['/api/dashboard', '/dashboard'], autenticarToken, async (req, res) => {
   try {
     const query = `
       SELECT 
@@ -64,6 +88,7 @@ app.get(['/api/dashboard', '/dashboard'], async (req, res) => {
       LEFT JOIN chaves c ON c.setor_id = s.id
       LEFT JOIN emprestimos e ON e.chave_id = c.id AND e.data_devolucao IS NULL
       LEFT JOIN pessoas_autorizadas p ON p.id = e.pessoa_autorizada_id
+      ORDER BY s.nome, c.numero_identificador
     `;
     const result = await pool.query(query);
     return res.json(result.rows);
@@ -73,8 +98,8 @@ app.get(['/api/dashboard', '/dashboard'], async (req, res) => {
   }
 });
 
-// Rota de Atrasados aceita /api/emprestimos/atrasados e /emprestimos/atrasados
-app.get(['/api/emprestimos/atrasados', '/emprestimos/atrasados'], async (req, res) => {
+// Rota de Chaves Atrasadas (Protegida)
+app.get(['/api/emprestimos/atrasados', '/emprestimos/atrasados'], autenticarToken, async (req, res) => {
   try {
     const query = `
       SELECT 
@@ -95,53 +120,90 @@ app.get(['/api/emprestimos/atrasados', '/emprestimos/atrasados'], async (req, re
   }
 });
 
-// Rota de Empréstimos aceita /api/emprestimos e /emprestimos
-app.post(['/api/emprestimos', '/emprestimos'], async (req, res) => {
+// Rota para Registrar Empréstimo (Protegida + Transação SQL)
+app.post(['/api/emprestimos', '/emprestimos'], autenticarToken, async (req, res) => {
+  const client = await pool.connect();
   try {
     const { chave_id, pessoa_autorizada_id, data_previsao_devolucao, usuario_operador_id } = req.body;
     const operadorId = Number(usuario_operador_id) || 1;
 
-    await pool.query(
+    if (!chave_id || !pessoa_autorizada_id || !data_previsao_devolucao) {
+      return res.status(400).json({ erro: 'Dados incompletos para empréstimo.' });
+    }
+
+    await client.query('BEGIN');
+
+    // Verificar se a chave já está emprestada
+    const checkKey = await client.query('SELECT status FROM chaves WHERE id = $1', [chave_id]);
+    if (checkKey.rows.length === 0) {
+      await client.query('ROLLBACK');
+      return res.status(404).json({ erro: 'Chave não encontrada.' });
+    }
+
+    if (checkKey.rows[0].status === 'emprestada') {
+      await client.query('ROLLBACK');
+      return res.status(400).json({ erro: 'Esta chave já se encontra emprestada.' });
+    }
+
+    // Registar o empréstimo
+    await client.query(
       `INSERT INTO emprestimos (chave_id, pessoa_autorizada_id, usuario_operador_id, data_previsao_devolucao, data_emprestimo) 
        VALUES ($1, $2, $3, $4, NOW())`,
       [chave_id, pessoa_autorizada_id, operadorId, data_previsao_devolucao]
     );
 
-    await pool.query(
+    // Atualizar estado da chave
+    await client.query(
       `UPDATE chaves SET status = 'emprestada' WHERE id = $1`,
       [chave_id]
     );
 
-    return res.json({ sucesso: true });
+    await client.query('COMMIT');
+    return res.json({ sucesso: true, mensagem: 'Empréstimo registrado com sucesso.' });
+
   } catch (err) {
+    await client.query('ROLLBACK');
     console.error("Erro ao registrar empréstimo:", err);
     return res.status(500).json({ erro: err.message });
+  } finally {
+    client.release();
   }
 });
 
-// Rota para Registrar Devolução
-app.post(['/api/emprestimos/:id/devolucao', '/emprestimos/:id/devolucao'], async (req, res) => {
+// Rota para Registrar Devolução (Protegida + Transação SQL)
+app.post(['/api/emprestimos/:id/devolucao', '/emprestimos/:id/devolucao'], autenticarToken, async (req, res) => {
+  const client = await pool.connect();
   try {
     const emprestimoId = req.params.id;
 
-    const empResult = await pool.query('SELECT chave_id FROM emprestimos WHERE id = $1', [emprestimoId]);
+    await client.query('BEGIN');
+
+    const empResult = await client.query('SELECT chave_id FROM emprestimos WHERE id = $1 AND data_devolucao IS NULL', [emprestimoId]);
     if (empResult.rows.length === 0) {
-      return res.status(404).json({ erro: 'Empréstimo não encontrado' });
+      await client.query('ROLLBACK');
+      return res.status(404).json({ erro: 'Empréstimo ativo não encontrado ou já devolvido.' });
     }
+    
     const chaveId = empResult.rows[0].chave_id;
 
-    await pool.query('UPDATE emprestimos SET data_devolucao = NOW() WHERE id = $1', [emprestimoId]);
-    await pool.query("UPDATE chaves SET status = 'guardada' WHERE id = $1", [chaveId]);
+    // Atualizar data de devolução e estado da chave
+    await client.query('UPDATE emprestimos SET data_devolucao = NOW() WHERE id = $1', [emprestimoId]);
+    await client.query("UPDATE chaves SET status = 'guardada' WHERE id = $1", [chaveId]);
 
-    return res.json({ sucesso: true });
+    await client.query('COMMIT');
+    return res.json({ sucesso: true, mensagem: 'Devolução registrada com sucesso.' });
+
   } catch (err) {
+    await client.query('ROLLBACK');
     console.error("Erro ao registrar devolução:", err);
     return res.status(500).json({ erro: err.message });
+  } finally {
+    client.release();
   }
 });
 
-// Rota para Relatório Mensal de Empréstimos
-app.get(['/api/relatorios/mensal', '/relatorios/mensal'], async (req, res) => {
+// Rota para Relatório Mensal de Empréstimos (Protegida)
+app.get(['/api/relatorios/mensal', '/relatorios/mensal'], autenticarToken, async (req, res) => {
   try {
     const { mes, ano } = req.query;
     
@@ -184,12 +246,11 @@ app.get(['/api/relatorios/mensal', '/relatorios/mensal'], async (req, res) => {
   }
 });
 
-// Listener local para testes em desenvolvimento (ignorado pela Vercel)
+// Listener local para desenvolvimento
 if (process.env.NODE_ENV !== 'production') {
   app.listen(3000, () => {
     console.log('Servidor rodando localmente na porta 3000');
   });
 }
 
-// OBRIGATÓRIO PARA A VERCEL
 module.exports = app;
