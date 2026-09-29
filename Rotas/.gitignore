@@ -1,9 +1,9 @@
-# Variáveis de ambiente e segredos (NUNCA PUBLICAR)
+# Variáveis de ambiente e segredos 
 .env
 .env.local
 .env.*.local
 
-# Pasta de dependências (MUITO PESADA)
+# Pasta de dependências 
 node_modules/
 
 # Arquivos de sistema e logs
